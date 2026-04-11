@@ -10,6 +10,7 @@ dependencies = [
     "langchain>=1.2.15",
     "langgraph>=1.1.6",
     "pydantic>=2.12.5",
+    "pymongo>=4.16.0",
     "python-dotenv>=1.2.2",
     "sentence-transformers>=5.4.0",
     "uvicorn>=0.44.0",
@@ -17,5 +18,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "faker>=40.13.0",
     "pytest>=9.0.3",
 ]
