@@ -2,6 +2,16 @@
   {
     "question": "How much does the Pro plan cost?",
     "expected": "The Pro plan costs $12 per user per month when billed annually, or $15 monthly.",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "pricing-plans.md",
+      "faq-general.md",
+      "pricing-plans.md",
+      "00-product-brief.md",
+      "pricing-plans.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "The Pro plan costs $12 per user per month when billed annually, or $15 per month when billed monthly. [Source: pricing-plans.md]",
     "faithfulness": {
       "score": 5,
@@ -15,6 +25,16 @@
   {
     "question": "Can a task have more than one assignee?",
     "expected": "No. Tasks are limited to a single assignee to keep accountability clear.",
+    "expected_source": "features-projects-and-tasks.md",
+    "retrieved_sources": [
+      "features-projects-and-tasks.md",
+      "features-projects-and-tasks.md",
+      "features-projects-and-tasks.md",
+      "account-management.md",
+      "features-projects-and-tasks.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "No, TaskFlow intentionally limits tasks to a single assignee to keep accountability clear. If multiple people need to collaborate, use @mentions in comments or create subtasks for each person. [Source: features-projects-and-tasks.md]",
     "faithfulness": {
       "score": 5,
@@ -22,12 +42,22 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by stating that a task can only have one assignee and provides alternative solutions for collaboration."
+      "reason": "The answer directly addresses the question by stating that a task can only have a single assignee and provides alternative solutions for collaboration."
     }
   },
   {
     "question": "Is there a Microsoft Teams integration?",
     "expected": "No. Microsoft Teams integration is on the roadmap but not available yet. You can use Zapier as a workaround.",
+    "expected_source": "features-integrations.md",
+    "retrieved_sources": [
+      "features-integrations.md",
+      "pricing-plans.md",
+      "features-integrations.md",
+      "pricing-plans.md",
+      "howto-invite-team-members.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "There is no direct Microsoft Teams integration available yet, but you can use the Zapier integration as a workaround. [Source: features-integrations.md]",
     "faithfulness": {
       "score": 5,
@@ -35,16 +65,26 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question about Microsoft Teams integration, providing a clear response and a workaround."
+      "reason": "The answer directly addresses the question about Microsoft Teams integration, providing a clear response and a workaround solution."
     }
   },
   {
     "question": "What happens when my free trial ends?",
     "expected": "Your workspace automatically moves to the Free plan. No data is deleted.",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "pricing-plans.md",
+      "billing-and-invoices.md",
+      "faq-general.md",
+      "account-management.md",
+      "faq-general.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "When your 14-day trial ends, your workspace automatically moves to the Free plan unless you add a payment method. No data is deleted. [Source: pricing-plans.md]",
     "faithfulness": {
       "score": 5,
-      "reason": "The answer is a direct quote from the context, making it fully faithful with no added or unsupported information."
+      "reason": "The answer is a direct quote from the context in pricing-plans.md, making it fully faithful with no added or unsupported information."
     },
     "relevancy": {
       "score": 5,
@@ -54,6 +94,16 @@
   {
     "question": "How do I enable two-factor authentication?",
     "expected": "Go to Settings, Account, Security. Click Enable two-factor authentication. Scan the QR code with an authenticator app and enter the 6-digit code to confirm. Save your recovery codes.",
+    "expected_source": "account-management.md",
+    "retrieved_sources": [
+      "account-management.md",
+      "troubleshooting-login-issues.md",
+      "account-management.md",
+      "account-management.md",
+      "troubleshooting-login-issues.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "To enable two-factor authentication, go to **Settings \u2192 Account \u2192 Security**, click **Enable two-factor authentication**, scan the QR code with an authenticator app, enter the 6-digit code from your app to confirm, and save your recovery codes in a safe place. [Source: account-management.md]",
     "faithfulness": {
       "score": 5,
@@ -61,25 +111,45 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer provides a step-by-step guide on how to enable two-factor authentication, directly addressing the question."
+      "reason": "The answer provides a step-by-step guide on how to enable two-factor authentication, fully addressing the question."
     }
   },
   {
     "question": "How many projects can I have on the Free plan?",
     "expected": "Up to 3 active projects.",
-    "actual": "On the Free plan, you can have up to 3 active projects. [Source: features-projects-and-tasks.md]",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "features-projects-and-tasks.md",
+      "faq-general.md",
+      "pricing-plans.md",
+      "features-projects-and-tasks.md",
+      "howto-set-up-recurring-tasks.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
+    "actual": "On the Free plan, you are limited to 3 active projects. [Source: features-projects-and-tasks.md]",
     "faithfulness": {
       "score": 5,
       "reason": "The answer only contains information that is directly supported by the context, specifically from the features-projects-and-tasks.md source."
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by stating the exact number of projects allowed on the Free plan."
+      "reason": "The answer directly addresses the question by stating the exact number of active projects allowed on the Free plan."
     }
   },
   {
     "question": "What is the deepest level of subtask nesting allowed?",
     "expected": "TaskFlow supports up to three levels of nesting (task, subtask, sub-subtask).",
+    "expected_source": "features-projects-and-tasks.md",
+    "retrieved_sources": [
+      "features-projects-and-tasks.md",
+      "features-projects-and-tasks.md",
+      "api-endpoints-tasks.md",
+      "howto-set-up-recurring-tasks.md",
+      "features-projects-and-tasks.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "TaskFlow supports up to three levels of nesting (task \u2192 subtask \u2192 sub-subtask). [Source: features-projects-and-tasks.md]",
     "faithfulness": {
       "score": 5,
@@ -93,6 +163,16 @@
   {
     "question": "What happens if my payment fails?",
     "expected": "TaskFlow retries the payment up to 3 times over 7 days. If all retries fail, the workspace moves to the Free plan. Data is never deleted.",
+    "expected_source": "billing-and-invoices.md",
+    "retrieved_sources": [
+      "billing-and-invoices.md",
+      "billing-and-invoices.md",
+      "account-management.md",
+      "billing-and-invoices.md",
+      "pricing-plans.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "If your payment fails, we'll retry it automatically up to 3 times over 7 days. You'll receive an email after each failed attempt, and during this time, your workspace will continue to work normally. If all retries fail, your workspace will be moved to the Free plan and you'll lose access to paid features. [Source: billing-and-invoices.md]",
     "faithfulness": {
       "score": 5,
@@ -106,6 +186,16 @@
   {
     "question": "What is the API rate limit for the Pro plan?",
     "expected": "The Pro plan allows 120 requests per minute and 10,000 requests per day.",
+    "expected_source": "api-rate-limits.md",
+    "retrieved_sources": [
+      "api-rate-limits.md",
+      "api-rate-limits.md",
+      "api-rate-limits.md",
+      "api-rate-limits.md",
+      "api-rate-limits.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "The API rate limit for the Pro plan is 120 requests per minute and 10,000 requests per day. [Source: api-rate-limits.md]",
     "faithfulness": {
       "score": 5,
@@ -119,19 +209,39 @@
   {
     "question": "How do I connect Slack to TaskFlow?",
     "expected": "Go to Settings, Integrations, find Slack and click Connect. Authorize the Slack workspace, choose a default notification channel, and optionally configure per-project notifications. Requires Pro or higher.",
-    "actual": "To connect Slack to TaskFlow, go to the integrations settings in TaskFlow by clicking your workspace name, then **Settings \u2192 Integrations**, find **Slack** and click **Connect**. You'll then be redirected to Slack to authorize the connection and choose the workspace you want to connect. [Source: howto-connect-slack.md]",
+    "expected_source": "howto-connect-slack.md",
+    "retrieved_sources": [
+      "features-integrations.md",
+      "howto-connect-slack.md",
+      "howto-connect-slack.md",
+      "howto-connect-slack.md",
+      "features-integrations.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
+    "actual": "To connect Slack to TaskFlow, go to the integrations settings by clicking your workspace name in the top-left, then **Settings \u2192 Integrations**. Find **Slack** in the list and click **Connect**. You'll be redirected to Slack to authorize the workspace and review the permissions TaskFlow is requesting. [Source: howto-connect-slack.md]",
     "faithfulness": {
       "score": 5,
       "reason": "The answer only contains information that is directly supported by the context, with no added or unsupported claims."
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer provides a step-by-step guide on how to connect Slack to TaskFlow, directly addressing the question."
+      "reason": "The answer provides a step-by-step guide on how to connect Slack to TaskFlow, fully addressing the question."
     }
   },
   {
     "question": "Which Slack slash commands can I use?",
     "expected": "You can use /taskflow create to create tasks, /taskflow list to show open tasks, /taskflow assign to assign a task, and /taskflow done to mark it complete.",
+    "expected_source": "howto-connect-slack.md",
+    "retrieved_sources": [
+      "howto-connect-slack.md",
+      "features-integrations.md",
+      "features-integrations.md",
+      "howto-connect-slack.md",
+      "howto-connect-slack.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "You can use the `/taskflow` slash command to create tasks from Slack. [Source: features-integrations.md]",
     "faithfulness": {
       "score": 5,
@@ -145,6 +255,16 @@
   {
     "question": "Does TaskFlow have a desktop app?",
     "expected": "No. TaskFlow does not have a desktop app. The web app is the desktop experience.",
+    "expected_source": "faq-general.md",
+    "retrieved_sources": [
+      "faq-general.md",
+      "faq-general.md",
+      "features-mobile-app.md",
+      "00-product-brief.md",
+      "00-product-brief.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "No, TaskFlow does not have a desktop app. We recommend using the web version in a browser tab. [Source: faq-general.md]",
     "faithfulness": {
       "score": 5,
@@ -158,19 +278,39 @@
   {
     "question": "Can I export comments from a project?",
     "expected": "Not via CSV export. Comments are not included in CSV exports. You can export them using JSON exports or via the TaskFlow API.",
+    "expected_source": "howto-export-project-data.md",
+    "retrieved_sources": [
+      "features-comments-and-mentions.md",
+      "howto-export-project-data.md",
+      "howto-export-project-data.md",
+      "features-comments-and-mentions.md",
+      "howto-export-project-data.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "No, comments are not included in CSV exports. To export comments, you can use the TaskFlow API or export your project data in JSON format, which includes comment metadata. [Source: features-comments-and-mentions.md]",
     "faithfulness": {
       "score": 5,
-      "reason": "The answer only contains information that is supported by the context, including the fact that comments are not included in CSV exports and can be exported using the TaskFlow API or JSON format."
+      "reason": "The answer only contains information that is directly supported by the context, including the fact that comments are not included in CSV exports and the alternatives for exporting comments."
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by stating that comments are not included in CSV exports and provides alternative methods for exporting comments."
+      "reason": "The answer directly addresses the question of exporting comments from a project and provides alternative methods to do so."
     }
   },
   {
     "question": "How do I invite a teammate to my workspace?",
     "expected": "Go to workspace Settings, Members, Invite people. Enter email addresses, select a workspace role, and click Send invitations. Invitation links are valid for 7 days.",
+    "expected_source": "howto-invite-team-members.md",
+    "retrieved_sources": [
+      "howto-invite-team-members.md",
+      "howto-invite-team-members.md",
+      "howto-invite-team-members.md",
+      "features-comments-and-mentions.md",
+      "howto-create-your-first-project.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "To invite a teammate to your workspace, click your workspace name in the top-left, then **Settings**, go to **Members \u2192 Invite people**, enter their email address, select a **workspace role**, and click **Send invitations**. Each person will receive an email with a link to join, valid for 7 days. [Source: howto-invite-team-members.md]",
     "faithfulness": {
       "score": 5,
@@ -184,19 +324,39 @@
   {
     "question": "What does TaskFlow cost if I want unlimited projects?",
     "expected": "You need at least the Pro plan at $12 per user per month billed annually, or $15 monthly. The Free plan is limited to 3 projects.",
-    "actual": "To have unlimited projects, you would need to be on either the Pro, Business, or Enterprise plan. The Pro plan costs $12 per user per month (billed annually) or $15 monthly. [Source: pricing-plans.md]",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "pricing-plans.md",
+      "features-projects-and-tasks.md",
+      "faq-general.md",
+      "faq-general.md",
+      "pricing-plans.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
+    "actual": "To have unlimited projects, you would need to subscribe to the Pro plan, which costs $12 per user per month (billed annually) or $15 monthly. [Source: pricing-plans.md]",
     "faithfulness": {
       "score": 5,
-      "reason": "The answer only contains information that is supported by the context, specifically the pricing plans and project limits per plan."
+      "reason": "The answer only contains information that is directly supported by the context, specifically the pricing plans and project limits per plan sections."
     },
     "relevancy": {
-      "score": 4,
-      "reason": "The answer partially addresses the question by mentioning the required plans but only provides the cost of the Pro plan, missing the costs of the Business and Enterprise plans."
+      "score": 5,
+      "reason": "The answer directly addresses the question by providing the cost of the Pro plan that includes unlimited projects."
     }
   },
   {
     "question": "My mobile app is not syncing. What should I do?",
     "expected": "Check if the app shows an Offline indicator. Connect to Wi-Fi or mobile data. Pull down to trigger a manual refresh. If that does not help, force-close and reopen the app. As a last resort, sign out and back in.",
+    "expected_source": "troubleshooting-sync-problems.md",
+    "retrieved_sources": [
+      "troubleshooting-sync-problems.md",
+      "troubleshooting-sync-problems.md",
+      "troubleshooting-sync-problems.md",
+      "troubleshooting-login-issues.md",
+      "troubleshooting-sync-problems.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "To troubleshoot the sync issue, first check if your mobile device is offline by looking for an \"Offline\" indicator at the top of the screen. If it is, connect to Wi-Fi or mobile data. Then, try pulling down on any screen to trigger a manual refresh. If changes still don't sync after 1 minute, force-close the app and reopen it. [Source: troubleshooting-sync-problems.md]",
     "faithfulness": {
       "score": 5,
@@ -204,12 +364,22 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer provides a step-by-step solution to troubleshoot and resolve the mobile app's sync issue, directly addressing the user's question."
+      "reason": "The answer provides a step-by-step solution to troubleshoot and potentially resolve the mobile app's sync issue."
     }
   },
   {
     "question": "I forgot my password. How do I reset it?",
     "expected": "Click Forgot password on the login page. TaskFlow sends a reset link valid for 1 hour. Check your spam folder if the email does not arrive.",
+    "expected_source": "troubleshooting-login-issues.md",
+    "retrieved_sources": [
+      "account-management.md",
+      "account-management.md",
+      "troubleshooting-login-issues.md",
+      "account-management.md",
+      "troubleshooting-login-issues.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "To reset your password, use the **Forgot password?** link on the login page. We'll email you a reset link that's valid for 1 hour. If you don't receive the email, check your spam folder, verify you're using the correct email address, and make sure support@taskflow.example.com is not blocked by your provider. [Source: account-management.md]",
     "faithfulness": {
       "score": 5,
@@ -217,25 +387,45 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer fully addresses the question by providing a step-by-step solution to reset the password."
+      "reason": "The answer provides a clear step-by-step solution to reset the password, addressing the user's question directly."
     }
   },
   {
     "question": "Why am I getting duplicate notifications?",
     "expected": "Likely because you have the same event type enabled on multiple channels (email, push, in-app) or multiple devices. Go to Settings, Notifications, and pick a primary channel per event type.",
+    "expected_source": "troubleshooting-notifications.md",
+    "retrieved_sources": [
+      "troubleshooting-notifications.md",
+      "troubleshooting-notifications.md",
+      "troubleshooting-notifications.md",
+      "troubleshooting-notifications.md",
+      "troubleshooting-notifications.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "You may be getting duplicate notifications because you have the same account signed in on multiple devices with push enabled on each, you're subscribed to both email and push for the same events, or an integration is echoing events already shown in-app. [Source: troubleshooting-notifications.md]",
     "faithfulness": {
       "score": 5,
-      "reason": "The answer only contains information that is directly supported by the context, specifically the possible causes for getting duplicate notifications."
+      "reason": "The answer only contains information that is directly supported by the context, specifically the possible causes for duplicate notifications."
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by providing specific reasons for receiving duplicate notifications."
+      "reason": "The answer directly addresses the question by providing possible reasons for receiving duplicate notifications."
     }
   },
   {
     "question": "Can I get a student discount?",
     "expected": "Yes. TaskFlow offers free Pro accounts for accredited students and educators. Email support@taskflow.example.com to apply.",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "faq-general.md",
+      "pricing-plans.md",
+      "faq-general.md",
+      "pricing-plans.md",
+      "pricing-plans.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "Yes, TaskFlow offers free Pro accounts for accredited students and educators. To apply, you can contact support@taskflow.example.com. [Source: faq-general.md]",
     "faithfulness": {
       "score": 5,
@@ -243,12 +433,22 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by stating that student discounts are available in the form of free Pro accounts for accredited students and provides application instructions."
+      "reason": "The answer directly addresses the question by stating that student discounts are available in the form of free Pro accounts for accredited students."
     }
   },
   {
     "question": "Is TaskFlow GDPR compliant?",
     "expected": "Yes. TaskFlow is GDPR compliant. You can request a data export or deletion at any time.",
+    "expected_source": "faq-general.md",
+    "retrieved_sources": [
+      "faq-general.md",
+      "faq-general.md",
+      "faq-general.md",
+      "faq-general.md",
+      "api-rate-limits.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "Yes, TaskFlow is GDPR compliant as it is a Spanish company and GDPR compliance is built in. You can request a data export or deletion at any time. [Source: faq-general.md]",
     "faithfulness": {
       "score": 5,
@@ -262,6 +462,16 @@
   {
     "question": "Does TaskFlow support SMS-based two-factor authentication?",
     "expected": "No. TaskFlow does not support SMS-based 2FA for security reasons. Only TOTP-based authenticator apps are supported.",
+    "expected_source": "account-management.md",
+    "retrieved_sources": [
+      "account-management.md",
+      "troubleshooting-login-issues.md",
+      "features-mobile-app.md",
+      "api-authentication.md",
+      "troubleshooting-login-issues.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "No, TaskFlow does not support SMS-based 2FA for security reasons. It supports TOTP-based 2FA instead. [Source: account-management.md]",
     "faithfulness": {
       "score": 5,
@@ -275,10 +485,20 @@
   {
     "question": "I need to speak with a human agent right now.",
     "expected": "I don't have enough information to answer that directly. Would you like me to connect you with a human agent?",
-    "actual": "I don't have enough information to answer your question. Would you like me to connect you with a human agent? [Source: 00-product-brief.md]",
+    "expected_source": null,
+    "retrieved_sources": [
+      "00-product-brief.md",
+      "00-product-brief.md",
+      "api-endpoints-tasks.md",
+      "pricing-plans.md",
+      "features-comments-and-mentions.md"
+    ],
+    "hit@3": null,
+    "hit@5": null,
+    "actual": "I don't have enough information to answer your question or provide assistance beyond the provided context. Would you like me to connect you with a human agent? [Source: 00-product-brief.md]",
     "faithfulness": {
       "score": 5,
-      "reason": "The answer only contains information that is supported by the context, specifically the mention of a human agent in the Enterprise section's custom pricing contact sales and the priority email support in the pricing-plans.md section."
+      "reason": "The answer only contains information that is supported by the context, specifically the mention of a human agent in the Enterprise section of the pricing-plans.md document."
     },
     "relevancy": {
       "score": 4,
@@ -288,6 +508,16 @@
   {
     "question": "Does TaskFlow integrate with Jira for my engineering team?",
     "expected": "Yes. TaskFlow offers two-way sync with Jira, available on the Business and Enterprise plans.",
+    "expected_source": "features-integrations.md",
+    "retrieved_sources": [
+      "features-integrations.md",
+      "faq-general.md",
+      "faq-general.md",
+      "features-projects-and-tasks.md",
+      "00-product-brief.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "Yes, TaskFlow offers a two-way sync with Jira projects, allowing you to mirror Jira issues as TaskFlow tasks and sync status changes in both directions. This integration is available on the Business and Enterprise plans. [Source: features-integrations.md]",
     "faithfulness": {
       "score": 5,
@@ -295,25 +525,45 @@
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by confirming TaskFlow's integration with Jira and providing additional details about the integration's functionality and availability."
+      "reason": "The answer directly addresses the question by confirming TaskFlow's integration with Jira and providing details about the integration's functionality and availability."
     }
   },
   {
     "question": "What is the cheapest way to pay for TaskFlow?",
     "expected": "Annual billing gives a 20% discount compared to monthly. The Free plan is always $0 but limited. For paid plans, Pro at $12 per user per month annually is the cheapest paid tier.",
-    "actual": "The cheapest way to pay for TaskFlow is through the Free plan, which is $0 per user per month and includes up to 3 active projects and 2 team members. Alternatively, if you need more features, the Pro plan is available for $12 per user per month (billed annually), which is 20% off the monthly price. [Source: pricing-plans.md]",
+    "expected_source": "pricing-plans.md",
+    "retrieved_sources": [
+      "pricing-plans.md",
+      "faq-general.md",
+      "pricing-plans.md",
+      "pricing-plans.md",
+      "billing-and-invoices.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
+    "actual": "The cheapest way to pay for TaskFlow is to use the Free plan, which is $0 per user per month and includes up to 3 active projects and 2 team members. Alternatively, if you need more features, the Pro plan is available for $12 per user per month (billed annually), which is 20% off the monthly price of $15. [Source: pricing-plans.md]",
     "faithfulness": {
       "score": 5,
       "reason": "The answer only contains information that is directly supported by the context, with no added facts or hallucinations."
     },
     "relevancy": {
       "score": 5,
-      "reason": "The answer directly addresses the question by providing the cheapest payment option for TaskFlow, which is the Free plan."
+      "reason": "The answer directly addresses the question by providing the cheapest payment option for TaskFlow, which is the Free plan, and also offers an alternative plan for users who need more features."
     }
   },
   {
     "question": "How long do you keep my data after I delete my account?",
     "expected": "TaskFlow retains anonymized logs for 30 days after account deletion for security auditing, then permanently deletes them.",
+    "expected_source": "account-management.md",
+    "retrieved_sources": [
+      "account-management.md",
+      "account-management.md",
+      "account-management.md",
+      "account-management.md",
+      "billing-and-invoices.md"
+    ],
+    "hit@3": 1,
+    "hit@5": 1,
     "actual": "We retain anonymized logs for 30 days after account deletion for security auditing, then permanently delete them. [Source: account-management.md]",
     "faithfulness": {
       "score": 5,

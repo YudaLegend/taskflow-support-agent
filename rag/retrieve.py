@@ -9,19 +9,19 @@ import chromadb
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db")
 
 
-def retrieve(query: str, k:int = 3) -> list[dict]:
-    """Find the k most relevant chunks for a query
+def retrieve(query: str, k: int = 3, collection_name: str | None = None) -> list[dict]:
+    """Find the k most relevant chunks for a query.
 
-    Args:
-        query (str): _description_
-        k (int, optional): _description_. Defaults to 3.
+    The collection name is configurable so you can eval different chunk-size
+    ingestions without touching caller code. Override globally via the
+    TASKFLOW_COLLECTION env var, or per-call via the argument.
 
     Returns a list of dicts:[{"text": "...", "source": "", "score": 0.42}, ...]
     """
-    # TODO 1: Create a PersistentClient (same path as ingest.py)ç
+    if collection_name is None:
+        collection_name = os.environ.get("TASKFLOW_COLLECTION", "taskflow_docs")
     client = chromadb.PersistentClient(path=CHROMA_DIR)
-    # TODO 2: Get the existing collection "taskflow_docs"
-    collection = client.get_collection("taskflow_docs")
+    collection = client.get_collection(collection_name)
     # TODO 3: Call collection.query(query_texts=[query], n_results=k)
     results = collection.query(query_texts=[query], n_results=k)
     # TODO 4: Build and return a list of result dicts

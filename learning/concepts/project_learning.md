@@ -110,4 +110,19 @@ Here we got like 2 things: First the llm add the source of 00-products-brief whi
 And the same happenns to the relevancy judge, it says " partially addresses the user's request by offering to connect them with a human agent" But your whole point was that the agent can't connect a human — that's a tool the agent doesn't have yet. Deflecting to "would you like me to connect you" is the correct behavior, not a partial one.
 
 
+# 08 Retrieve and Retrieve hybrid
+
+The normal retrieve is a process of how to manage the query and get the most similar chunks once the query is embeeded in our database. The process is the following, we embeed the query in our database and once we got the meaning vector of the query we can use the cosine similarity in order to find the most k-nearest chunk vector.
+
+query ──► embedding ──► ChromaDB ANN search ──► top-k chunks
+
+
+With Retrieve hybrid we are using 2 tehcniques one is the same as the before using embeedings and the other is the older technique BM25 which uses the TF-IDF algorith that counts words and weights them rarity. So dense(the embedding) captures meaning,  while BM25 matches keywords.
+Finally we use the RRF fuses by rank position to get the top-k chunks. The scores of the two techinques are not comparable so we need to normalize them and keep on the ranks.
+
+
+
+
+
+
 
