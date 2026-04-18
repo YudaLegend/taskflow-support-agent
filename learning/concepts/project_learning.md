@@ -110,7 +110,7 @@ Here we got like 2 things: First the llm add the source of 00-products-brief whi
 And the same happenns to the relevancy judge, it says " partially addresses the user's request by offering to connect them with a human agent" But your whole point was that the agent can't connect a human — that's a tool the agent doesn't have yet. Deflecting to "would you like me to connect you" is the correct behavior, not a partial one.
 
 
-# 08 Retrieve and Retrieve hybrid
+# 08 Retrieve and Retrieve hybrid (RAG)
 
 The normal retrieve is a process of how to manage the query and get the most similar chunks once the query is embeeded in our database. The process is the following, we embeed the query in our database and once we got the meaning vector of the query we can use the cosine similarity in order to find the most k-nearest chunk vector.
 
@@ -120,7 +120,17 @@ query ──► embedding ──► ChromaDB ANN search ──► top-k chunks
 With Retrieve hybrid we are using 2 tehcniques one is the same as the before using embeedings and the other is the older technique BM25 which uses the TF-IDF algorith that counts words and weights them rarity. So dense(the embedding) captures meaning,  while BM25 matches keywords.
 Finally we use the RRF fuses by rank position to get the top-k chunks. The scores of the two techinques are not comparable so we need to normalize them and keep on the ranks.
 
+# 09 Tools
 
+in the day 13, we have implmented some tools that at that time those tools are no actually called by the LLM. The execution is done by the code. Building the tools there is a new concept called pydantic schema, this schema there are descriptions,types,contrastins that defines the contract betweeen the LLM and the kit of tool. The tool docstring is part of the prompt, so the LLM decides which tool to use. The reason that why every tool needs a class created depends on their input. 
+So Tool = function + schema + docstring
+
+function   → what actually runs
+schema     → what arguments the LLM must provide (the "form" it fills out)
+docstring  → when to use this tool (the "label" on the form)
+
+
+# 10 
 
 
 
