@@ -130,7 +130,22 @@ schema     → what arguments the LLM must provide (the "form" it fills out)
 docstring  → when to use this tool (the "label" on the form)
 
 
-# 10 
+# 10 LangGraph Agent
+
+So since whave just one node of the agent and another node for the tools, so the agent only can call the tools just once. To solve that we will introduce the ReAct-style agent, which means Reasoning, action, observe, final-answer. That process is a loop, we got stop conditions to make the LLM stop generating more tokens, that is a important process during the action, because once the agent execute a tool we dont wanna the llm still generating more tokens as we are waiting for the information retrieve by the tool. Then in the observe process if the information is not enought it will pass the "cake" another again to the reasoning.
+
+# 11 Conversation Memory
+
+Here we learn how to make the Agent have memory, this is very simple via LangGraph checkpointer, this is kind like a thread that maintains multi-turns conversations but this only works for short-term, for long-term we should save the conversation into the PostGres database or similar.
+
+# 12 Guarrails
+
+Since now, we have made or agent to do so much things right, which is great, the agent can think, observe, call tools to retrieve the infromations but in the AI field specifically in the Agents, one of the most important thing is what the agent should not do. As we have done in the prompting, we have made some rules to make the agent following, specifiying that we want which structure of output, how is agent working, so in the guardrails we will do the same, we will add a some Patterns and some rules to make the agent following, for example, as this is a chatbot for Q/A for the fake SaaS taskflow, we would not allow our agent to generate some python code if the user asks him to make a scrawler web site right or tell the agent to forget about the rules that we've made and tell him the prompting that we'have internally right. So all these should be prevented. To achive this, we are adding condition edges in our graph
+# Flow:
+    #   START → guard_input → (refused?) → END
+    #                       → (allowed?) → agent → (tools?) → tools → agent → ...
+    #                                              → (done?)  → END
+
 
 
 

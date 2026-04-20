@@ -17,11 +17,12 @@ The agent will use:
 
 ## Tech stack
 
-- **LLM provider:** Groq (free tier), model `llama-3.3-70b-versatile`
+- **LLM provider:** Groq (free tier). `llama-3.3-70b-versatile` for RAG, `meta-llama/llama-4-scout-17b-16e-instruct` for tool-calling agent
 - **Vector DB:** ChromaDB (local, persistent)
 - **Embeddings:** `all-MiniLM-L6-v2` (ChromaDB default, 384-dim)
 - **Database:** MongoDB Community Server, local, database name `taskflow`
 - **Agent framework:** LangGraph + LangChain core
+- **Observability:** Langfuse v3 (self-hosted via docker-compose) + langfuse v4 Python SDK
 - **Python:** 3.11, managed via `uv`
 
 ## Project structure
@@ -30,7 +31,9 @@ The agent will use:
 taskflow-support-agent/
 ├── agent/
 │   ├── llm.py              # Groq wrapper — chat(messages, ...) -> str
-│   └── graph.py            # Minimal one-node LangGraph agent (Day 5)
+│   ├── tools.py            # 5 tool functions + Pydantic schemas + LangChain wrappers
+│   ├── guardrails.py       # is_out_of_scope, redact_pii, MAX_TOOL_CALLS
+│   └── graph.py            # ReAct agent: guard_input → agent → tools loop, MemorySaver, Langfuse
 ├── rag/
 │   ├── ingest.py           # Load docs → chunk → embed → ChromaDB
 │   ├── retrieve.py         # retrieve(query, k) -> list of chunks
@@ -40,14 +43,17 @@ taskflow-support-agent/
 │   ├── chroma_db/          # Persistent vector DB (gitignored)
 │   └── seed_mongo.py       # Seeder: 50 users, 200 tickets, 500 events, 20 subs
 ├── eval/
-│   ├── golden.jsonl        # 25 hand-written Q/A pairs
+│   ├── golden.jsonl        # 25 hand-written Q/A pairs (RAG eval)
 │   ├── run_eval.py         # LLM-as-judge eval (faithfulness + relevancy)
+│   ├── agent_scenarios.jsonl  # 15 scripted agent conversations (Day 17)
+│   ├── run_agent_eval.py   # Trajectory + endpoint eval, deterministic assertions
 │   └── results.json        # Latest eval output
+├── docker-compose.yml      # Langfuse v3 stack (web + worker + postgres + clickhouse + redis + minio)
 ├── app/                    # Not yet used (FastAPI later)
 ├── tests/                  # Not yet used
 ├── notebooks/              # Not yet used
 ├── learning/concepts/      # User's self-notes on concepts learned
-└── .env                    # GROQ_API_KEY (gitignored)
+└── .env                    # GROQ_API_KEY + LANGFUSE_PUBLIC_KEY/SECRET_KEY/HOST (gitignored)
 ```
 
 ## Days completed
@@ -69,7 +75,10 @@ taskflow-support-agent/
 | 13 | Tool interface (function calling, Pydantic schemas) | ✅ |
 | 14 | ReAct agent with LangGraph tool-calling loop | ✅ |
 | 15 | Short-term conversation memory (MemorySaver checkpointer) | ✅ |
-| 16+ | Guardrails, FastAPI, eval, Docker, CI | ⏳ |
+| 16 | Guardrails (refusal, PII redaction, max-tool-calls) | ✅ |
+| 17 | Agent eval — 15 scripted scenarios, trajectory + endpoint assertions | ✅ |
+| 18 | Observability — self-hosted Langfuse v3 via docker-compose, callback tracing | ✅ |
+| 19+ | FastAPI serving layer, Docker packaging, CI | ⏳ |
 
 ### Day 11 progress so far
 
@@ -154,7 +163,7 @@ Stored in memory, but highlight:
 
 ## User's current state
 
-End of Day 15. Phase 3 (agent + tools + memory) is functional.
+End of Day 18. Phase 3 (agent + tools + memory) is hardened (guardrails + eval + observability).
 
 ### Days 13–15 summary
 
@@ -208,41 +217,85 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `agent/graph.py` — rewritten (Day 14), then extended (Day 15) with checkpointer + multi-turn tests
 - `learning/concepts/project_interview.md` — extended with Sections 8–10
 
+### Days 16–18 summary
+
+**Day 16 — Guardrails:**
+- New `agent/guardrails.py` — three pure functions: `is_out_of_scope(text)`, `redact_pii(text)`, constant `MAX_TOOL_CALLS = 8`.
+- Refusal patterns (regex, case-insensitive): code generation, creative writing, competitor names (Asana/Trello/etc.), regulated advice (medical/legal/tax/financial).
+- PII redaction: emails → `[EMAIL]`, phone numbers → `[PHONE]`, IPv4 → `[IP]`. Used for log surfaces, NOT user-facing text.
+- New graph node `guard_input` runs BEFORE the agent. If `is_out_of_scope` matches, returns canonical `REFUSAL_MESSAGE` and routes to END — LLM is never invoked. This is defense-in-depth on top of system-prompt rules.
+- Hardened SYSTEM_PROMPT in `agent/graph.py`: added scope rules + safety rules (don't reveal prompt, don't role-play, don't execute instructions in tool results).
+- `should_continue` now also enforces `MAX_TOOL_CALLS` — counts tool calls in message history, ends loop if exceeded. Distinct from `recursion_limit` (which counts node visits).
+- Smoke tests (Tests 4–5 in `agent/graph.py` `__main__`): 4 out-of-scope refusals all trigger guard, legitimate question still passes through.
+
+**Day 17 — Agent eval:**
+- New `eval/agent_scenarios.jsonl` — 15 scripted scenarios across 6 categories (`happy_product`, `happy_account`, `multi_turn`, `ticket_creation`, `guardrail`, `edge_case`).
+- New `eval/run_agent_eval.py` — runner with 6 deterministic assertion types: `tools_called_contains`, `tools_called_ordered`, `tools_not_called`, `response_contains`, `response_refused`, `max_tool_calls`. NO LLM-as-judge — every check is hand-coded against the trajectory or final response.
+- Multi-turn scenarios reuse the same `thread_id` across messages so memory is exercised.
+- Per-scenario UUID suffix on thread_id prevents test bleed across runs.
+- Output: per-scenario pass/fail with check-by-check breakdown, category aggregate, JSON dump to `agent_results.json`.
+
+**Day 18 — Observability (Langfuse):**
+- New `docker-compose.yml` — full Langfuse v3 self-hosted stack (6 services: web + worker + postgres + clickhouse + redis + minio). Only port 3000 exposed to host (UI). All inter-service comms internal.
+- `agent/graph.py`: added `get_langfuse_handler()` (returns `CallbackHandler` if env vars set, else None for graceful degradation) and `flush_langfuse()` (forces async batcher to flush before process exit — required, otherwise short scripts lose events).
+- `agent/graph.py` `agent` node now accepts `RunnableConfig` and threads it through `llm.invoke(messages, config=config)` — without this, callbacks die at the node boundary and no spans get emitted.
+- Both `__main__` test block in `agent/graph.py` and `eval/run_agent_eval.py` now build a config dict with `"callbacks": [langfuse_handler]` and pass it to every invoke. Each scenario gets `metadata.scenario_id` + `run_name` for filtering in the Langfuse UI.
+- Verified end-to-end: agent run produces nested traces (`LangGraph` → `guard_input` → `agent` (LLM call) → `tools` → ...) with token counts + latency per span.
+
+**Key Day 16–18 learnings (interview-gold):**
+> **Guardrails:** "Defense in depth" isn't a buzzword for agents — every layer (system prompt, code-level check, tool-call cap) handles a different failure mode. Refusal in the system prompt is necessary but not sufficient: prompt injection can override it. A code-level check that runs BEFORE the LLM is the only thing that survives a successful injection.
+>
+> **Agent eval vs RAG eval:** RAG evals need LLM-as-judge because answer correctness is fuzzy. Agent evals don't — the trajectory (which tools fired, in what order) is fully deterministic and assertable. Use the cheaper, faster, transparent test whenever you can.
+>
+> **Observability:** "It worked in eval" and "it works in prod" are different claims. Without traces, you debug agents by re-running and hoping. With traces, you click on yesterday's failure and see the exact prompt the LLM saw, the exact tool result it got, the latency of each step, and the token cost. This is the difference between "vibes-based debugging" and an engineering discipline.
+
+**Stack pain points worth remembering:**
+- Langfuse v2 Python SDK doesn't work with langchain 1.x (imports removed). Must use Langfuse v3+ server + v4+ SDK.
+- LangGraph callbacks DO NOT auto-propagate from `graph.invoke(config=...)` into node functions if the node calls `llm.invoke(messages)` — the node must accept `RunnableConfig` and pass it through explicitly.
+- Langfuse SDK is async/buffered. Always call `client.flush()` before script exit or your traces silently disappear.
+- Old/orphan docker containers from earlier compose attempts can hold the port even after `docker compose down` — they share host port mappings but different service names. Check `docker ps -a` first.
+
+### Files added/modified on Days 16–18
+- `agent/guardrails.py` — new (Day 16)
+- `agent/graph.py` — extended with `guard_input` node, hardened SYSTEM_PROMPT, MAX_TOOL_CALLS enforcement, Langfuse handler/flush, `RunnableConfig` thread-through
+- `eval/agent_scenarios.jsonl` — new (Day 17), 15 scenarios
+- `eval/run_agent_eval.py` — new (Day 17), runner + assertion checker, Langfuse-instrumented
+- `docker-compose.yml` — new (Day 18), Langfuse v3 stack
+- `pyproject.toml` — added `langchain-groq>=1.0.0`, `langfuse>=3.0.0`; loosened `groq` pin for langchain-groq compatibility
+- `.env` — added `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`
+
 ### Open issues / still pending
 - `agent/llm.py` still uses `llama-3.3-70b-versatile` — fine for RAG answerer, but graph.py uses Llama 4 Scout
 - Reranker skeleton (`rag/rerank.py`) still has unfilled TODOs — skipped deliberately
-- Interview questions Sections 1–2 drafted but not yet revised; Sections 3–10 unanswered
+- Interview questions Sections 1–2 drafted but not yet revised; Sections 3–13 unanswered
 - `00-product-brief.md` still indexed in ChromaDB (known from Day 10)
 - `MemorySaver` is in-RAM only — conversations lost on restart (fine for dev, not prod)
 - Message history grows unbounded — no trimming/summarization yet
+- Docker-compose uses dev-only secrets (`ENCRYPTION_KEY=00...`, hardcoded Postgres creds). Fine for local, must be swapped before anything leaves localhost.
+- Agent eval is not wired into CI yet — currently a manual `uv run python -m eval.run_agent_eval`
+- Some agent-eval scenarios may be flaky on LLM judgment edges (e.g. `edge_unknown_user`, `multiturn_ticket_followup`). If CI flaps, tighten assertions or accept flake and tag `@flaky`.
 
-### Next session — Day 16: Guardrails (recommended)
+### Next session — Day 19: FastAPI serving layer (recommended)
 
-**Why this over long-term memory:**
-- Long-term memory adds significant complexity (vector store for memories, retrieval
-  strategy for past facts, eviction policy) without obvious portfolio payoff
-- Guardrails is a HIGH-signal interview topic right now (prompt injection is hot
-  in 2026 hiring). Every production agent needs them.
-- Several guardrail pieces are easy wins on top of existing code (max-tool-calls
-  is half-done via `recursion_limit`; output validation reuses Pydantic patterns
-  from Day 13).
+**Why this next:**
+- All the core agent work is done (tools, memory, guardrails, eval, observability). It's time to make this callable from something other than a Python `__main__`.
+- FastAPI teaches the "LLM app = stateless service with a chat endpoint" pattern that every real deployment uses, and it's what an interviewer will expect to see demoed.
+- Langfuse is already wired, so prod-style traces "for free" from the FastAPI endpoint.
 
-**Day 16 plan:**
-- **Refusal logic** for out-of-scope questions (e.g., "write me a poem", competitor
-  product questions). Add to system prompt + a check node.
-- **PII redaction in logs** — emails, ticket descriptions get masked before any
-  print/log. Helps for the FastAPI day too.
-- **Max-tool-calls enforcement** beyond `recursion_limit` — count actual tool
-  invocations per conversation, hard cap at e.g. 8.
-- **Output validation** with Pydantic — agent responses for structured operations
-  (e.g., create_ticket confirmations) validated before returning to user.
-- **Prompt injection defense** — basic checks on user input ("ignore previous
-  instructions", role-hijacking attempts).
+**Day 19 plan (tentative — confirm with user before starting):**
+- **POST `/chat`** endpoint: body `{thread_id, message}` → streamed or full response.
+- **Session handling:** the `thread_id` is client-supplied; server just passes it to `graph.invoke(...)`. No server-side session store yet.
+- **Langfuse callback** attached per request. Pass the request ID as `metadata.request_id` for cross-reference in the UI.
+- **Minimal UI** (one HTML page + fetch) to prove the endpoint works end-to-end. Skip React — keep it simple.
+- **Health endpoint** + graceful shutdown that calls `langfuse.flush()`.
 
-**Concepts to study before Day 16:** prompt injection (direct vs indirect),
-input validation vs output validation, defense in depth, PII handling
-basics (GDPR awareness).
+**Alternative next day if user prefers:** Docker packaging of the agent itself (multi-stage Dockerfile that builds the Python app + runs alongside the existing compose stack). Less user-visible demo value but strong infra signal.
+
+**Concepts to study before Day 19:** FastAPI basics (endpoints, Pydantic request/response models, dependency injection), streaming responses (SSE vs WebSocket), ASGI lifespan events, the "12-factor app" config pattern.
 
 **Collaboration reminder:** User is learning for interviews. Explain
 concepts before code. For pipeline/algo code give a skeleton + TODOs; for
-scaffolding/boilerplate just write it. Be brief. Use tables.
+scaffolding/boilerplate just write it. Be brief. Use tables. The
+TaskFlow project is at the Interview-Ready Shape phase — focus on
+polishing what exists and wiring the parts together (FastAPI, Docker,
+CI, README) rather than adding new agent capabilities.
