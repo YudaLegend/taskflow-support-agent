@@ -78,7 +78,8 @@ taskflow-support-agent/
 | 16 | Guardrails (refusal, PII redaction, max-tool-calls) | ✅ |
 | 17 | Agent eval — 15 scripted scenarios, trajectory + endpoint assertions | ✅ |
 | 18 | Observability — self-hosted Langfuse v3 via docker-compose, callback tracing | ✅ |
-| 19+ | FastAPI serving layer, Docker packaging, CI | ⏳ |
+| 19 | FastAPI serving layer — /health, /chat, /chat/stream (SSE), /feedback, demo UI | ✅ |
+| 20+ | Docker packaging, persistent checkpointer, tests + CI | ⏳ |
 
 ### Day 11 progress so far
 
@@ -163,7 +164,7 @@ Stored in memory, but highlight:
 
 ## User's current state
 
-End of Day 18. Phase 3 (agent + tools + memory) is hardened (guardrails + eval + observability).
+End of Day 19. Phase 4 has begun — the agent is now reachable from a real HTTP service with token streaming, user-feedback scoring, and a one-page demo UI. End-to-end loop (UI → FastAPI → LangGraph → Langfuse trace + score) is fully wired.
 
 ### Days 13–15 summary
 
@@ -264,38 +265,79 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `pyproject.toml` — added `langchain-groq>=1.0.0`, `langfuse>=3.0.0`; loosened `groq` pin for langchain-groq compatibility
 - `.env` — added `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`
 
+### Day 19 summary
+
+**FastAPI serving layer:**
+- New `app/` package: `schemas.py` (Pydantic request/response models), `deps.py` (DI providers + health checks), `main.py` (FastAPI app + 5 routes), `static/index.html` (one-page chat UI).
+- Routes: `GET /` (UI), `GET /health` (mongo + chroma pings), `POST /chat` (non-streaming, returns ChatResponse), `POST /chat/stream` (SSE streaming), `POST /feedback` (👍/👎 → Langfuse score).
+- `lifespan` async context manager: warms `get_graph()` singleton on startup, calls `flush_langfuse()` on shutdown — fixes the Day 18 "short-lived process loses traces" issue at the FastAPI level.
+- DI providers (`get_graph`, `get_langfuse`, `get_langfuse_client`) cached via `@lru_cache(maxsize=1)` so the compiled graph + Langfuse handler/client are process-wide singletons.
+- `request_id == Langfuse trace_id` design: `_new_request_id()` uses `Langfuse.create_trace_id()` (32-char W3C hex). Both `/chat` and `/chat/stream` wrap `graph.ainvoke` / `astream_events` in `langfuse_client.start_as_current_observation(trace_context={"trace_id": request_id}, as_type="chain")`. The langchain CallbackHandler emits child spans inside that context, so the whole trace shares our request_id.
+- `/feedback` calls `langfuse_client.create_score(trace_id=req.request_id, name="user_feedback", value=1.0|0.0, data_type="NUMERIC")` and immediately `flush()`s so the score appears in the UI without batcher delay.
+- SSE wire format: `data: <json>\n\n` per frame. Frame types: `token`, `tool_start`, `tool_end`, `done` (final, carries `request_id` for /feedback). `_run_graph()` wraps `astream_events(version="v2")` in the Langfuse span; `event_stream()` filters and formats events.
+- **Streaming edge case fix:** when `guard_input` refuses, no LLM is called → zero `on_chat_model_stream` events → empty bubble. Solution: count tokens in the loop; if `tokens_streamed == 0`, call `graph.aget_state({"configurable": {"thread_id": ...}})` and emit the last AIMessage's content as a single token frame before `done`.
+- Demo UI (`app/static/index.html`): vanilla HTML/JS, dark theme. `thread_id = crypto.randomUUID()` per page load. Consumes `/chat/stream` via `fetch` + `ReadableStream` + manual SSE parser (EventSource only supports GET). Each assistant bubble gets 👍/👎 buttons that POST to `/feedback`.
+
+**Stack pain points worth remembering:**
+- Langfuse v4 SDK is OpenTelemetry under the hood. The v3 trick of pinning trace ID via `metadata={"langfuse_trace_id": ...}` is silently ignored in v4. The replacement is `start_as_current_observation(trace_context={"trace_id": ...})` — and the method is named `start_as_current_observation`, NOT `start_as_current_span` (that misnomer cost us 30 minutes).
+- When SDK docs disagree with reality, `dir(client)` and `inspect.signature(client.method)` are the source of truth. We discovered the right method name and the `TraceContext` TypedDict shape (`{"trace_id": str}`) by introspecting the live client.
+- PowerShell's `curl` is aliased to `Invoke-WebRequest` and mangles `\"` escapes in single-quoted strings. Use `Invoke-RestMethod` with `ConvertTo-Json`, or pipe JSON via stdin to `curl.exe --data-binary "@-"`.
+- LangGraph's `astream_events(version="v2")` requires `async for` (it's itself an async generator). The agent makes multiple LLM calls per turn (decide-tool → answer-compose), so token frames arrive in two bursts with a tool gap between them — that's correct, not a bug.
+- Mount order matters for `StaticFiles`: register specific routes BEFORE the catch-all `app.mount(...)`, otherwise the static handler shadows them.
+
+**Key Day 19 learnings (interview-gold):**
+> **Trace-ID pinning is the feedback loop.** Without it, `/feedback` has no way to find the right trace — Langfuse auto-generates a trace_id the client never sees. The whole UX of "click 👎, see it on the trace in Langfuse" hinges on `request_id == trace_id`. Same pattern OpenAI uses with `response.id` for their feedback API.
+>
+> **Streaming UX requires zero-token-path awareness.** Any code path that returns an answer WITHOUT calling the LLM bypasses the token stream. The guard_input refusal exposed this. If your client expects tokens, you have to detect zero-token completion and synthesize a frame from the final state — otherwise the UI shows an empty bubble.
+>
+> **SDK introspection beats docs when docs lag.** Live `dir()` and `inspect.signature()` found `start_as_current_observation` and the exact `create_score` kwargs faster than searching docs would have. First-class debugging tool, not a fallback.
+
+### Files added/modified on Day 19
+- `app/__init__.py` — new (package marker)
+- `app/schemas.py` — new, `ChatRequest/Response`, `FeedbackRequest`, `HealthResponse`
+- `app/deps.py` — new, `get_graph`, `get_langfuse`, `get_langfuse_client`, `check_mongo`, `check_chroma`
+- `app/main.py` — new, FastAPI app with lifespan + 5 routes (/, /health, /chat, /chat/stream, /feedback)
+- `app/static/index.html` — new, one-page demo chat UI (vanilla JS, ~180 lines)
+- `agent/graph.py` — added `get_langfuse_client()` exposing the raw client for /feedback's `create_score`
+
 ### Open issues / still pending
 - `agent/llm.py` still uses `llama-3.3-70b-versatile` — fine for RAG answerer, but graph.py uses Llama 4 Scout
 - Reranker skeleton (`rag/rerank.py`) still has unfilled TODOs — skipped deliberately
 - Interview questions Sections 1–2 drafted but not yet revised; Sections 3–13 unanswered
 - `00-product-brief.md` still indexed in ChromaDB (known from Day 10)
-- `MemorySaver` is in-RAM only — conversations lost on restart (fine for dev, not prod)
+- `MemorySaver` is in-RAM only — conversations lost on restart, AND two requests on the same `thread_id` at once will race the checkpointer (no per-thread locking). Acceptable for dev, must be swapped (PostgresSaver) before deploy.
 - Message history grows unbounded — no trimming/summarization yet
 - Docker-compose uses dev-only secrets (`ENCRYPTION_KEY=00...`, hardcoded Postgres creds). Fine for local, must be swapped before anything leaves localhost.
 - Agent eval is not wired into CI yet — currently a manual `uv run python -m eval.run_agent_eval`
 - Some agent-eval scenarios may be flaky on LLM judgment edges (e.g. `edge_unknown_user`, `multiturn_ticket_followup`). If CI flaps, tighten assertions or accept flake and tag `@flaky`.
+- `/feedback` always returns 204 even if `trace_id` doesn't exist in Langfuse — `create_score` doesn't validate, it just creates an orphan score. Could surface this as 404 by querying first, but adds latency.
+- Demo UI has no message-history persistence — page refresh = new `thread_id` = lost conversation. Same statelessness as the server, by design.
+- FastAPI service has no auth, no rate limiting, no CORS config — fine for `localhost`, blocks public deploy.
 
-### Next session — Day 19: FastAPI serving layer (recommended)
+### Next session — Day 20 candidates (pick one with user)
 
-**Why this next:**
-- All the core agent work is done (tools, memory, guardrails, eval, observability). It's time to make this callable from something other than a Python `__main__`.
-- FastAPI teaches the "LLM app = stateless service with a chat endpoint" pattern that every real deployment uses, and it's what an interviewer will expect to see demoed.
-- Langfuse is already wired, so prod-style traces "for free" from the FastAPI endpoint.
+**A. Docker packaging of the FastAPI app (strongest infra signal):**
+- Multi-stage Dockerfile (uv build stage → slim runtime stage)
+- Add `app` service to existing `docker-compose.yml` so the whole stack (Langfuse + Mongo + Chroma + agent) comes up with `docker compose up`
+- Concepts: multi-stage builds, `.dockerignore`, environment passthrough, container networking (the agent must reach `langfuse-web:3000`, `mongodb:27017`, etc. — local hostnames change in containers)
+- **Recommended next.** Closes the "looks like a real product" gap and is what interviewers ask about most ("how would you deploy this?").
 
-**Day 19 plan (tentative — confirm with user before starting):**
-- **POST `/chat`** endpoint: body `{thread_id, message}` → streamed or full response.
-- **Session handling:** the `thread_id` is client-supplied; server just passes it to `graph.invoke(...)`. No server-side session store yet.
-- **Langfuse callback** attached per request. Pass the request ID as `metadata.request_id` for cross-reference in the UI.
-- **Minimal UI** (one HTML page + fetch) to prove the endpoint works end-to-end. Skip React — keep it simple.
-- **Health endpoint** + graceful shutdown that calls `langfuse.flush()`.
+**B. Persistent checkpointer (PostgresSaver):**
+- Swap `MemorySaver()` → `PostgresSaver(conn_string=...)` in `agent/graph.py`
+- Add a `taskflow-postgres` service to docker-compose (already have one for Langfuse — could reuse or add a separate DB)
+- Conversations now survive restarts; multi-replica deploy becomes possible
+- Smaller scope than A; good if user wants a faster win.
 
-**Alternative next day if user prefers:** Docker packaging of the agent itself (multi-stage Dockerfile that builds the Python app + runs alongside the existing compose stack). Less user-visible demo value but strong infra signal.
+**C. Tests + CI for the FastAPI layer:**
+- `pytest` + `httpx.AsyncClient` against `app.main:app`
+- Mock the graph dep (`app.dependency_overrides[get_graph] = ...`) so tests don't need Groq/Langfuse running
+- GitHub Actions workflow: lint + type-check + test on push
+- Demonstrates the "agent eval ≠ unit test" lesson — both have value, both belong in CI.
 
-**Concepts to study before Day 19:** FastAPI basics (endpoints, Pydantic request/response models, dependency injection), streaming responses (SSE vs WebSocket), ASGI lifespan events, the "12-factor app" config pattern.
+**D. README + interview prep polish:**
+- Write a real README.md (not the placeholder) with architecture diagram, quickstart, screenshots
+- Demo GIF/video of the chat UI hitting Langfuse traces
+- Finish drafting Sections 3–13 of `learning/concepts/project_interview.md`
+- Lower technical lift but high portfolio value — this is what a recruiter actually opens.
 
-**Collaboration reminder:** User is learning for interviews. Explain
-concepts before code. For pipeline/algo code give a skeleton + TODOs; for
-scaffolding/boilerplate just write it. Be brief. Use tables. The
-TaskFlow project is at the Interview-Ready Shape phase — focus on
-polishing what exists and wiring the parts together (FastAPI, Docker,
-CI, README) rather than adding new agent capabilities.
+**Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is at the Interview-Ready Shape phase — focus on polishing what exists and wiring the parts together rather than adding new agent capabilities.

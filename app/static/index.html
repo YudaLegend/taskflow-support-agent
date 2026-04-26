@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TaskFlow Support</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --border: #262a33;
+    --text: #e6e8eb;
+    --muted: #8a93a3;
+    --user: #2b6df0;
+    --assistant: #1f2531;
+    --accent: #6ee7b7;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 15px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel);
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .meta { font-size: 12px; color: var(--muted); font-family: ui-monospace, monospace; }
+  #chat { flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; }
+  .msg { margin-bottom: 16px; display: flex; flex-direction: column; }
+  .msg .bubble {
+    padding: 10px 14px; border-radius: 12px; max-width: 85%;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .msg.user { align-items: flex-end; }
+  .msg.user .bubble { background: var(--user); color: white; }
+  .msg.assistant .bubble { background: var(--assistant); border: 1px solid var(--border); }
+  .msg .toolbar {
+    margin-top: 6px; display: flex; gap: 8px; align-items: center;
+    font-size: 12px; color: var(--muted);
+  }
+  .msg .toolbar button {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 2px 8px; border-radius: 6px; cursor: pointer; font-size: 14px;
+  }
+  .msg .toolbar button:hover { color: var(--text); border-color: var(--muted); }
+  .msg .toolbar button.active { color: var(--accent); border-color: var(--accent); }
+  .indicator {
+    display: inline-block; padding: 4px 10px; border-radius: 12px;
+    background: var(--assistant); border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; font-style: italic;
+  }
+  footer {
+    padding: 12px 20px; border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  #composer {
+    max-width: 800px; margin: 0 auto; display: flex; gap: 8px;
+  }
+  #composer textarea {
+    flex: 1; resize: none; min-height: 40px; max-height: 160px;
+    padding: 10px 12px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  #composer button {
+    padding: 0 18px; background: var(--user); color: white;
+    border: none; border-radius: 8px; cursor: pointer; font: inherit;
+  }
+  #composer button:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TaskFlow Support Agent</h1>
+  <span class="meta">thread: <span id="thread-id"></span></span>
+</header>
+
+<div id="chat"></div>
+
+<footer>
+  <form id="composer">
+    <textarea id="input" placeholder="Ask about pricing, integrations, your tickets..." autofocus></textarea>
+    <button type="submit" id="send">Send</button>
+  </form>
+</footer>
+
+<script>
+// --- session setup -----------------------------------------------------
+// One thread_id per page load. Refreshing the page = new conversation.
+const THREAD_ID = crypto.randomUUID();
+document.getElementById('thread-id').textContent = THREAD_ID.slice(0, 8);
+
+const chat = document.getElementById('chat');
+const form = document.getElementById('composer');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+
+// --- DOM helpers -------------------------------------------------------
+function addMessage(role) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  wrap.appendChild(bubble);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+  return { wrap, bubble };
+}
+
+function addIndicator(text) {
+  const span = document.createElement('div');
+  span.className = 'indicator';
+  span.textContent = text;
+  chat.appendChild(span);
+  chat.scrollTop = chat.scrollHeight;
+  return span;
+}
+
+function addFeedbackButtons(wrap, requestId) {
+  const bar = document.createElement('div');
+  bar.className = 'toolbar';
+  for (const rating of ['up', 'down']) {
+    const btn = document.createElement('button');
+    btn.textContent = rating === 'up' ? '👍' : '👎';
+    btn.onclick = async () => {
+      const res = await fetch('/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: requestId, rating, comment: null }),
+      });
+      if (res.ok) {
+        btn.classList.add('active');
+        bar.querySelectorAll('button').forEach(b => { if (b !== btn) b.disabled = true; });
+      }
+    };
+    bar.appendChild(btn);
+  }
+  wrap.appendChild(bar);
+}
+
+// --- SSE parser --------------------------------------------------------
+// /chat/stream returns Server-Sent Events. EventSource doesn't support
+// POST, so we use fetch + a manual parser. Splits the byte stream on the
+// `\n\n` SSE event delimiter and JSON-parses each `data: ...` line.
+async function* parseSSE(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf('\n\n')) !== -1) {
+      const frame = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('data: ')) {
+          yield JSON.parse(line.slice(6));
+        }
+      }
+    }
+  }
+}
+
+// --- main send loop ----------------------------------------------------
+async function sendMessage(text) {
+  addMessage('user').bubble.textContent = text;
+  const { wrap, bubble } = addMessage('assistant');
+  let indicator = null;
+
+  try {
+    const res = await fetch('/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: THREAD_ID, message: text }),
+    });
+
+    for await (const evt of parseSSE(res)) {
+      if (evt.type === 'token') {
+        bubble.textContent += evt.content;
+        chat.scrollTop = chat.scrollHeight;
+      } else if (evt.type === 'tool_start') {
+        indicator = addIndicator(`🔍 calling ${evt.name}...`);
+      } else if (evt.type === 'tool_end') {
+        if (indicator) { indicator.remove(); indicator = null; }
+      } else if (evt.type === 'done') {
+        addFeedbackButtons(wrap, evt.request_id);
+      }
+    }
+  } catch (err) {
+    bubble.textContent = `Error: ${err.message}`;
+    bubble.style.color = 'var(--danger)';
+  } finally {
+    send.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// --- event wiring ------------------------------------------------------
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  send.disabled = true;
+  input.disabled = true;
+  sendMessage(text);
+});
+
+// Cmd/Ctrl+Enter to send; plain Enter inserts newline (chat-like UX).
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    form.requestSubmit();
+  }
+});
+</script>
+</body>
+</html>

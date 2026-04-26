@@ -80,6 +80,20 @@ def flush_langfuse() -> None:
     if _langfuse_client is not None:
         _langfuse_client.flush()
 
+
+def get_langfuse_client():
+    """Return the underlying Langfuse client (for create_score, etc.) or None.
+
+    Different from get_langfuse_handler() which returns the LangChain
+    CallbackHandler. The raw client is needed to attach SCORES (user feedback)
+    to traces after the fact — the handler only emits spans during a run.
+
+    Lazy-initialises by calling get_langfuse_handler() once if needed.
+    """
+    if _langfuse_client is None:
+        get_langfuse_handler()
+    return _langfuse_client
+
 # ---------------------------------------------------------------------------
 # System prompt — defines the agent's persona and rules
 # ---------------------------------------------------------------------------
