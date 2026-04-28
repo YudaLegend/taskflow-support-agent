@@ -115,8 +115,44 @@ services:
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
 
+  # ---------------------------------------------------------------------------
+  # The TaskFlow agent — built from the local Dockerfile, depends on Langfuse.
+  #
+  # MongoDB stays on the host (Windows Service); we reach it via
+  # host.docker.internal. Langfuse is in the compose network so the agent uses
+  # the service name (langfuse-web) — no host.docker.internal detour needed.
+  # ---------------------------------------------------------------------------
+  app:
+    build: .                       # uses the Dockerfile next to this file
+    image: taskflow-agent          # tag the built image (so `docker images` shows it)
+    container_name: taskflow-agent
+    restart: unless-stopped
+    depends_on:
+      langfuse-web:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env                       # GROQ_API_KEY + Langfuse keys (NEVER baked into the image)
+    environment:
+      # These OVERRIDE anything in .env — explicit wins.
+      # Inside the compose network, langfuse-web resolves via Docker DNS.
+      MONGO_URI: mongodb://host.docker.internal:27017
+      LANGFUSE_HOST: http://langfuse-web:3000
+    extra_hosts:
+      # Makes host.docker.internal work on Linux too (no-op on Win/Mac).
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Bind-mount the data dir so the container reads the same ChromaDB
+      # index you already ingested on the host. No re-ingestion needed.
+      - ./data:/app/data
+      # Named volume for the sentence-transformers / HF model cache —
+      # survives `docker compose down` so first-start downloads happen once.
+      - hf_cache:/root/.cache/huggingface
+
 volumes:
   langfuse_postgres_data:
   langfuse_clickhouse_data:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
+  hf_cache:

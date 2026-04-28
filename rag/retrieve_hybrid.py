@@ -13,7 +13,10 @@ import chromadb
 from rank_bm25 import BM25Okapi
 
 
-CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db")
+CHROMA_DIR = os.getenv(
+    "CHROMA_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db"),
+)
 
 
 # Simple tokenizer — lowercase, split on non-word chars. BM25 needs token lists.

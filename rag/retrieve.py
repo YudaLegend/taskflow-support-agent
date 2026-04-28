@@ -6,7 +6,10 @@ import os
 import chromadb
 
 
-CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db")
+CHROMA_DIR = os.getenv(
+    "CHROMA_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db"),
+)
 
 
 def retrieve(query: str, k: int = 3, collection_name: str | None = None) -> list[dict]:

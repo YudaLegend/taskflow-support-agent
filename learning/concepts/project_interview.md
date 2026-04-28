@@ -3,14 +3,16 @@
 Questions an interviewer could ask about what's been built so far (through Day 18).
 Answer each in your own words, then I'll review.
 
-> **Scope:** covers Days 1–18 — project setup, Groq wrapper, LangGraph skeleton,
+> **Scope:** covers Days 1–22 — project setup, Groq wrapper, LangGraph skeleton,
 > MongoDB seeding, RAG ingestion, retrieval, eval framework, chunk-size sweeps,
 > hybrid retrieval (BM25 + RRF), cross-encoder reranking, tool interface
 > (Pydantic schemas + function calling), ReAct agent loop with LangGraph,
 > short-term conversation memory via checkpointers, guardrails
 > (refusal, PII redaction, max-tool-calls), scripted agent evaluation
-> (trajectory + endpoint assertions), and Langfuse observability
-> (self-hosted traces, spans, metadata).
+> (trajectory + endpoint assertions), Langfuse observability
+> (self-hosted traces, spans, metadata), FastAPI serving layer (sync + SSE
+> streaming, /feedback wired to Langfuse scores), and Docker packaging
+> (multi-stage build, compose stack).
 
 ---
 
@@ -157,6 +159,52 @@ Thats is the way that how we find the most suitable parameters depending on the 
 82. Langfuse tracks token counts, latency, and cost. Which one is most useful for debugging agent loops, and why?
 83. Your eval harness tags each trace with `metadata.scenario_id` and `run_name`. Concretely, what can you do in the Langfuse UI *because* of those tags that you couldn't do without them?
 84. A user complains "the bot gave me a weird answer at 2pm." You have Langfuse set up. Walk me through how you'd find and diagnose that specific interaction.
+
+## Section 14 — FastAPI serving layer (Day 19)
+
+85. Why FastAPI over Flask for an LLM app? Name two specific reasons.
+86. The `/chat` handler is `async def` and uses `await graph.ainvoke(...)`, not `graph.invoke(...)`. What would happen with the sync version, and why is async required here?
+87. Walk me through everything FastAPI does between the moment the JSON `{"thread_id":"x","message":"y"}` arrives and your endpoint's first line executes.
+88. Why use Pydantic models for request/response bodies instead of plain dicts? Give two concrete benefits.
+89. You used `Depends(get_graph)` instead of importing the graph at module top. What's the win? When would you reach for it again?
+90. The compiled graph is wrapped in `@lru_cache(maxsize=1)`. Why a cache instead of a global variable?
+91. Explain the `lifespan` context manager. What runs before `yield`? After? Why is it the right place to call `langfuse.flush()`?
+92. SSE vs WebSocket — when do you pick which? Why was SSE the right call for `/chat/stream`?
+93. The SSE wire format requires `data: <json>\n\n` (double newline). What happens with a single `\n`?
+94. EventSource (the browser API) only supports GET. Your `/chat/stream` is POST. Walk through how the client consumes it.
+95. Your async generator yields events into a `StreamingResponse`. Why use a generator at all instead of building the full response and returning it?
+96. The agent makes multiple LLM calls per turn (decide-tool → answer). Tokens arrive in two bursts with a gap. Is that a bug? Why or why not?
+97. When the guardrail refuses, no `on_chat_model_stream` events fire — the bubble would be empty. Explain your fix and why it's safe.
+98. Why is `request_id == trace_id` so important for `/feedback` to work? What was the alternative, and why is it worse?
+99. Langfuse v4 changed the API for trace pinning vs v3. What was the v3 mechanism, what's the v4 mechanism, and how did you find the right method?
+100. Two requests arrive on the same `thread_id` simultaneously. What happens? How would you fix it for production?
+101. Your FastAPI service stores zero state on the server (other than the in-memory checkpointer). What's the architectural advantage of a stateless service? What's the cost?
+102. The `/health` endpoint returns 200 even when degraded. Why not 503? When would you flip that?
+103. You set `X-Accel-Buffering: no` on the streaming response. What does that header do, and what bug would you hit without it behind nginx?
+
+## Section 15 — Containerization with Docker (Day 22)
+
+104. What's the difference between a container and a VM, in one sentence each? Why does that difference matter for ML workloads?
+105. Image vs container vs registry — define each in one line.
+106. What's the difference between a `Dockerfile` and `docker-compose.yml`? When would you have one without the other?
+107. Why a multi-stage build for this project? What specifically does the runtime stage *not* contain that the builder stage does?
+108. You picked `python:3.11-slim`, not `python:3.11-alpine`. Why? What's the gotcha with ML wheels on alpine?
+109. Why is `libgomp1` apt-installed in the runtime stage? What error do you hit without it?
+110. Explain Docker's layer cache. Why do you `COPY pyproject.toml uv.lock` BEFORE `COPY . .`?
+111. What goes in `.dockerignore` and why? Name three things that absolutely must be there for a Python project, and why each.
+112. `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]` — explain why `--host 0.0.0.0` is required and what happens if you forget.
+113. `EXPOSE 8000` in a Dockerfile vs `-p 8000:8000` on `docker run`. Which one actually publishes the port? What does the other one do?
+114. Bind mount vs named volume — when do you use each? In your project, why is `data/chroma_db` a bind mount but the HuggingFace cache is a named volume?
+115. Inside a container, what does `localhost` mean? Why does `MONGO_URI=mongodb://localhost:27017` break inside the container, and what's the fix?
+116. `host.docker.internal` resolves to what, exactly? Is it available on Linux, Mac, Windows? Why do production deployments not rely on it?
+117. Two services in the same `docker-compose.yml` need to talk to each other. How do they find each other? (Hint: not by IP.)
+118. Why must you NEVER bake `.env` into a Docker image? What's the realistic threat model?
+119. `CMD` vs `ENTRYPOINT` — when to use which? What's the practical difference for your image?
+120. You set `PYTHONUNBUFFERED=1` and `PYTHONDONTWRITEBYTECODE=1` as env vars. What does each do, and why do they matter inside a container?
+121. Image size: ~1.5 GB single-stage vs ~400 MB multi-stage. Where did the 1.1 GB go?
+122. After building, you ran `docker run --env-file .env -e MONGO_URI=...`. Why pass MONGO_URI explicitly when it's already in `.env`?
+123. Walk me through what happens when you type `docker compose up`. Name three steps Docker actually performs.
+124. Production-readiness gap: if I gave this image to an SRE today, name three things they'd reject before letting it run in their cluster.
 
 ---
 

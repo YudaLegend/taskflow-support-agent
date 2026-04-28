@@ -8,6 +8,7 @@ Each tool is a plain Python function with:
 The LLM never executes these directly — your orchestrator (LangGraph) will.
 """
 
+import os
 from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
@@ -16,10 +17,12 @@ from pymongo import MongoClient
 from rag.retrieve import retrieve
 
 # ---------------------------------------------------------------------------
-# MongoDB connection  (same URI as seed_mongo.py)
+# MongoDB connection  (override via MONGO_URI env var; default = local dev)
+# In Docker we set MONGO_URI=mongodb://host.docker.internal:27017 to reach
+# the Mongo Service on the host machine.
 # ---------------------------------------------------------------------------
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "taskflow"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DB_NAME = os.getenv("MONGO_DB", "taskflow")
 
 _client: MongoClient | None = None
 

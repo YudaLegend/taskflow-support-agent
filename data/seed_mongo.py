@@ -1,5 +1,6 @@
 """Seeds the taskflow MongoDB database with fake data for development."""
 
+import os
 import random
 from datetime import datetime, timedelta, timezone
 
@@ -10,8 +11,8 @@ fake = Faker()
 Faker.seed(42)
 random.seed(42)
 
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "taskflow"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DB_NAME = os.getenv("MONGO_DB", "taskflow")
 
 PLANS = ["free", "pro", "business", "enterprise"]
 BILLING_CYCLES = ["monthly", "annual"]

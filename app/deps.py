@@ -65,7 +65,8 @@ def get_langfuse_client():
 def check_mongo() -> bool:
     """Return True if MongoDB is reachable. Bounded by a 500ms timeout."""
     try:
-        client = MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=500)
+        uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+        client = MongoClient(uri, serverSelectionTimeoutMS=500)
         client.admin.command("ping")
         return True
     except (PyMongoError, Exception):
@@ -75,7 +76,7 @@ def check_mongo() -> bool:
 def check_chroma() -> bool:
     """Return True if the ChromaDB persistent store opens cleanly."""
     try:
-        path = os.path.join("data", "chroma_db")
+        path = os.getenv("CHROMA_PATH", os.path.join("data", "chroma_db"))
         client = PersistentClient(path=path)
         client.list_collections()
         return True

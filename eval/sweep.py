@@ -16,7 +16,10 @@ from eval.run_eval import run_eval
 from chromadb import PersistentClient
 
 EXPERIMENTS_MD = os.path.join(os.path.dirname(__file__), "RETRIEVAL_EXPERIMENTS.md")
-CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db")
+CHROMA_DIR = os.getenv(
+    "CHROMA_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db"),
+)
 
 CONFIGS = [
     # label, chunk_size, chunk_overlap, retriever, reranker, notes

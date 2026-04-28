@@ -1,0 +1,46 @@
+# Same syntax as .gitignore — anything matched here is NOT sent to the
+# Docker build daemon. Smaller context = faster builds + smaller images.
+
+# --- venvs & Python build artifacts -----------------------------------
+.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- secrets — NEVER ship .env into an image --------------------------
+# Docker images are public-by-default in a CI/registry context; an image
+# with .env baked in leaks every key to anyone who can `docker pull`.
+.env
+.env.*
+
+# --- VCS / IDE --------------------------------------------------------
+.git/
+.gitignore
+.gitattributes
+.github/
+.vscode/
+.idea/
+
+# --- Docker meta ------------------------------------------------------
+# These files are USED to build, but don't need to be IN the image.
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# --- persistent state — bind-mounted, not baked into the image -------
+# data/docs IS shipped (the RAG corpus), but data/chroma_db is the
+# index — large, mutable, and bind-mounted from the host so ingestion
+# done outside the container is visible inside.
+data/chroma_db/
+
+# --- dev-only artifacts ----------------------------------------------
+notebooks/
+learning/
+eval/results.json
+eval/agent_results.json
+HANDOFF.md
+*.log

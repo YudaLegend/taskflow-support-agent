@@ -79,7 +79,10 @@ taskflow-support-agent/
 | 17 | Agent eval — 15 scripted scenarios, trajectory + endpoint assertions | ✅ |
 | 18 | Observability — self-hosted Langfuse v3 via docker-compose, callback tracing | ✅ |
 | 19 | FastAPI serving layer — /health, /chat, /chat/stream (SSE), /feedback, demo UI | ✅ |
-| 20+ | Docker packaging, persistent checkpointer, tests + CI | ⏳ |
+| 20 | (skipped — Streamlit UI replaced by HTML+SSE in Day 19) | ⏭️ |
+| 21 | (deferred — tests + CI moved to Day 23) | ⏭️ |
+| 22 | Docker — multi-stage Dockerfile, env-var refactor, app service in compose | ✅ |
+| 23+ | Tests + CI, persistent checkpointer, README polish | ⏳ |
 
 ### Day 11 progress so far
 
@@ -164,7 +167,7 @@ Stored in memory, but highlight:
 
 ## User's current state
 
-End of Day 19. Phase 4 has begun — the agent is now reachable from a real HTTP service with token streaming, user-feedback scoring, and a one-page demo UI. End-to-end loop (UI → FastAPI → LangGraph → Langfuse trace + score) is fully wired.
+End of Day 22. Phase 4 is hardened — the entire stack (agent + Langfuse v3 + its 4 dependencies) comes up with `docker compose up --build`. Single image for the agent, bind-mounted ChromaDB index (no re-ingestion), MongoDB stays on host via `host.docker.internal`. End-to-end demo verified: chat UI → streaming response → Langfuse trace + 👍/👎 score, all running in containers.
 
 ### Days 13–15 summary
 
@@ -300,10 +303,71 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `app/static/index.html` — new, one-page demo chat UI (vanilla JS, ~180 lines)
 - `agent/graph.py` — added `get_langfuse_client()` exposing the raw client for /feedback's `create_score`
 
+### Day 22 summary
+
+**Architecture deviations from original spec (intentional):**
+- No separate UI container — UI is one HTML file served by FastAPI's `GET /` from Day 19. Splitting it into nginx would be 2 containers for 1 feature.
+- No Chroma server container — using ChromaDB as an embedded library (`PersistentClient`) with a bind-mounted persistent store. Embedded is correct at single-replica scale; server mode would add a network hop with no scaling win.
+- MongoDB stays on the host (Windows Service) — reached via `host.docker.internal:27017`. Avoids re-seeding into a containerized Mongo. Documented as a "swap to compose-managed Mongo before deploy" debt.
+
+**Step 1 — env-var refactor (12-factor config):**
+- Touched 7 files: `agent/tools.py`, `app/deps.py`, `rag/{retrieve,retrieve_hybrid,ingest}.py`, `eval/sweep.py`, `data/seed_mongo.py`.
+- Pattern: `MONGO_URI = os.getenv("MONGO_URI", <previous_hardcoded>)` and same for `CHROMA_PATH`. Defaults preserved → host behavior unchanged.
+- Why this matters: hardcoded `localhost:27017` and `data/chroma_db` would only work in dev. With env vars, the same image runs anywhere as long as you supply the right config.
+
+**Step 2 — Dockerfile (multi-stage):**
+- Builder stage: `python:3.11-slim` + uv from `ghcr.io/astral-sh/uv:latest`. Installs deps into `/app/.venv`. Layer-cached: deps install runs only when `pyproject.toml` or `uv.lock` change.
+- Runtime stage: fresh `python:3.11-slim` + `libgomp1` (apt) + the venv copied from builder. Final image ~3 GB (most of it = torch + onnxruntime + sentence-transformers, all required).
+- ENV: `PATH=/app/.venv/bin:$PATH`, `PYTHONUNBUFFERED=1` (so `docker logs` shows output immediately), `PYTHONDONTWRITEBYTECODE=1`.
+- CMD: `uvicorn app.main:app --host 0.0.0.0 --port 8000` — `0.0.0.0` is mandatory inside a container; `127.0.0.1` would only listen on the container's loopback, unreachable from the bridge network.
+
+**Step 2 — `.dockerignore`:**
+- Excludes `.venv/`, `__pycache__/`, `.git/`, `.env*`, `data/chroma_db/` (bind-mounted), `notebooks/`, `learning/`, `HANDOFF.md`, eval result JSONs.
+- Critical: `.env` MUST be ignored — images get pushed to registries, leaked secrets are recoverable forever from old layers even if removed in newer layers.
+
+**Step 3 (skipped) — standalone smoke test:**
+- Originally planned `docker run --env-file .env -e MONGO_URI=... -e LANGFUSE_HOST=... -v ./data:/app/data taskflow-agent` to verify the image works in isolation.
+- Skipped because Docker Desktop went unhealthy mid-process; image blob got corrupted during a Desktop restart. Pruned + moved Docker storage from C: to E: (more disk space) and went straight to Step 4 instead. Step 4 verifies the same thing through compose with one less debugging round.
+
+**Step 4 — `docker-compose.yml` extension:**
+- Added `app:` service: `build: .` (uses local Dockerfile), `image: taskflow-agent` (tag), `depends_on: langfuse-web`, ports `8000:8000`.
+- `env_file: - .env` for secrets (Groq + Langfuse keys), `environment:` block for compose-network-specific overrides (`MONGO_URI=mongodb://host.docker.internal:27017`, `LANGFUSE_HOST=http://langfuse-web:3000`).
+- `extra_hosts: - "host.docker.internal:host-gateway"` — makes `host.docker.internal` work on Linux too (no-op on Win/Mac, but defensive).
+- Bind mount `./data:/app/data` for ChromaDB index. Named volume `hf_cache:/root/.cache/huggingface` for sentence-transformers model cache (survives `docker compose down`, first-start downloads happen once).
+- Verified: `docker compose up --build -d` brings up 7 containers, `/health` returns `mongo:true,chroma:true`, chat UI works at `http://localhost:8000/`, traces appear in Langfuse, /feedback scores show on traces.
+
+**Stack pain points worth remembering:**
+- **Image size 3 GB, not 400 MB.** ML wheels are huge: torch ~800 MB, onnxruntime ~300 MB, sentence-transformers + langchain stack add the rest. Multi-stage saved ~1 GB vs single-stage but you can't slim past the deps. Real optimization later: CPU-only torch wheel (`pip install torch --index-url https://download.pytorch.org/whl/cpu`), drop sentence-transformers if Chroma's default suffices.
+- **Build time was 2.5 hours first build** — Windows + WSL2 + huge wheels + slow disk. Subsequent rebuilds use layer cache and are much faster IF source-only changes (deps stay cached).
+- **`--env-file` vs Python `dotenv` strictness:** Docker's `--env-file` rejects spaces around `=`. The line `GROQ_API_KEY = "..."` (works fine in dotenv) crashed `docker run` with "variable 'GROQ_API_KEY ' contains whitespaces". Standard convention: no spaces.
+- **`docker compose restart` does NOT re-read `env_file`.** It restarts the process inside the existing container. To pick up new `.env` values you must `docker compose up -d --force-recreate <service>` or `docker compose down && up`. Famous junior-trip-up.
+- **Docker Desktop disk on C:** runs out of space fast on a small SSD. Move it to a bigger drive in Settings → Resources → Advanced → Disk image location. The move wipes Docker data, so prune first.
+- **Docker Desktop instability** during long builds — the WSL2 backend can corrupt image blobs if it's restarted mid-extract. Symptoms: `input/output error` on a blob hash that exists in `docker images`. Fix: rm + rebuild.
+
+**Key Day 22 learnings (interview-gold):**
+> **Dockerfile vs docker-compose.yml is the standard interview question.** A Dockerfile builds ONE image. Compose orchestrates a multi-service stack — which images, what env vars, what ports, what volumes, how they network. Complementary, not substitutes. Our project: Dockerfile builds the agent image; compose runs it alongside 6 off-the-shelf images (Postgres, Redis, ClickHouse, MinIO, Langfuse-web, Langfuse-worker).
+>
+> **Container networking has three rules:** (1) `--host 0.0.0.0` mandatory inside containers, (2) `localhost` inside a container = the container itself, NOT the host — use `host.docker.internal` to reach the host's network on Win/Mac, (3) services in the same compose network find each other by service name (Docker's embedded DNS), no IP addresses needed.
+>
+> **Layer caching is the difference between a 30s rebuild and a 30min rebuild.** Always `COPY pyproject.toml uv.lock` BEFORE `COPY . .`. The deps layer only invalidates when those two files change, not on every source edit.
+>
+> **Multi-stage builds let you ship without build tools.** Stage 1 has uv, gcc, dev headers. Stage 2 (the final image) has only Python + the installed venv + the runtime libs. Saves ~1 GB and reduces attack surface — no compilers in production.
+
+### Files added/modified on Day 22
+- `Dockerfile` — new, multi-stage build (builder + runtime), uv-based dep install, `libgomp1` runtime dep
+- `.dockerignore` — new, excludes secrets (`.env*`), large state (`data/chroma_db`), VCS, dev artifacts
+- `docker-compose.yml` — extended with `app:` service (build local Dockerfile, env_file + overrides, bind mount + named volume) + `hf_cache` volume
+- `agent/tools.py` — `MONGO_URI` and `DB_NAME` from env vars (defaults preserved)
+- `app/deps.py` — `check_mongo` and `check_chroma` read env vars
+- `rag/retrieve.py`, `rag/retrieve_hybrid.py`, `rag/ingest.py`, `eval/sweep.py` — `CHROMA_DIR` from env var
+- `data/seed_mongo.py` — `MONGO_URI` and `DB_NAME` from env vars
+- `.env` — normalized line 1 (removed spaces around `=` so Docker's `--env-file` accepts it)
+- `learning/concepts/project_interview.md` — added Section 14 (FastAPI, Q85–103) and Section 15 (Docker, Q104–124)
+
 ### Open issues / still pending
 - `agent/llm.py` still uses `llama-3.3-70b-versatile` — fine for RAG answerer, but graph.py uses Llama 4 Scout
 - Reranker skeleton (`rag/rerank.py`) still has unfilled TODOs — skipped deliberately
-- Interview questions Sections 1–2 drafted but not yet revised; Sections 3–13 unanswered
+- Interview questions Sections 1–2 drafted but not yet revised; Sections 3–15 unanswered
 - `00-product-brief.md` still indexed in ChromaDB (known from Day 10)
 - `MemorySaver` is in-RAM only — conversations lost on restart, AND two requests on the same `thread_id` at once will race the checkpointer (no per-thread locking). Acceptable for dev, must be swapped (PostgresSaver) before deploy.
 - Message history grows unbounded — no trimming/summarization yet
@@ -313,31 +377,38 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `/feedback` always returns 204 even if `trace_id` doesn't exist in Langfuse — `create_score` doesn't validate, it just creates an orphan score. Could surface this as 404 by querying first, but adds latency.
 - Demo UI has no message-history persistence — page refresh = new `thread_id` = lost conversation. Same statelessness as the server, by design.
 - FastAPI service has no auth, no rate limiting, no CORS config — fine for `localhost`, blocks public deploy.
+- **Docker image is ~3 GB** — torch + onnxruntime + sentence-transformers dominate. Optimization path: CPU-only torch wheel via `--index-url https://download.pytorch.org/whl/cpu` (saves ~600 MB), or drop sentence-transformers if Chroma's default embedder suffices.
+- **MongoDB still on host** (Windows Service), reached via `host.docker.internal`. Fine for local single-machine dev. Before deploy: add a `mongo:` service to compose, run a one-time `seed_mongo.py` against it, point `MONGO_URI` at the service name.
+- **Dockerfile runs as root.** Production hardening: add `RUN useradd -r appuser && chown -R appuser:appuser /app` and `USER appuser` near the end of the runtime stage.
+- **No image pinning.** `python:3.11-slim` floats — should be `python:3.11.X-slim-bookworm@sha256:...` for reproducibility before any prod deploy.
+- **No healthcheck instruction in the Dockerfile** — compose could declare one against `/health`, but we didn't.
 
-### Next session — Day 20 candidates (pick one with user)
+### Next session — Day 23 candidates (pick one with user)
 
-**A. Docker packaging of the FastAPI app (strongest infra signal):**
-- Multi-stage Dockerfile (uv build stage → slim runtime stage)
-- Add `app` service to existing `docker-compose.yml` so the whole stack (Langfuse + Mongo + Chroma + agent) comes up with `docker compose up`
-- Concepts: multi-stage builds, `.dockerignore`, environment passthrough, container networking (the agent must reach `langfuse-web:3000`, `mongodb:27017`, etc. — local hostnames change in containers)
-- **Recommended next.** Closes the "looks like a real product" gap and is what interviewers ask about most ("how would you deploy this?").
+**A. Tests + CI (highest engineering-discipline signal):**
+- `pytest` + `httpx.AsyncClient` against `app.main:app` for the API layer
+- `app.dependency_overrides[get_graph] = lambda: <fake_graph>` so tests don't need Groq/Langfuse running
+- Pure-function tests for `agent/guardrails.py` (regex, PII redaction) and `_extract_turn_tools`
+- GitHub Actions workflow: ruff + pytest on push. Optionally include the agent-eval scenarios as a separate scheduled job (not blocking PRs because LLM-as-judge is noisy).
+- **Recommended next.** Tests are what convert "it worked when I ran it" into "it works."
 
 **B. Persistent checkpointer (PostgresSaver):**
 - Swap `MemorySaver()` → `PostgresSaver(conn_string=...)` in `agent/graph.py`
-- Add a `taskflow-postgres` service to docker-compose (already have one for Langfuse — could reuse or add a separate DB)
-- Conversations now survive restarts; multi-replica deploy becomes possible
-- Smaller scope than A; good if user wants a faster win.
+- Reuse the Langfuse Postgres or add a separate `taskflow-postgres` service in compose (cleaner — separation of concerns)
+- Conversations now survive `docker compose down/up`; multi-replica deploy becomes possible
+- Concepts: connection pooling, schema migration on first start, idempotent setup.
 
-**C. Tests + CI for the FastAPI layer:**
-- `pytest` + `httpx.AsyncClient` against `app.main:app`
-- Mock the graph dep (`app.dependency_overrides[get_graph] = ...`) so tests don't need Groq/Langfuse running
-- GitHub Actions workflow: lint + type-check + test on push
-- Demonstrates the "agent eval ≠ unit test" lesson — both have value, both belong in CI.
+**C. README + interview-prep polish (highest portfolio-value-per-hour):**
+- Write a real README.md with architecture diagram (Mermaid), quickstart (`docker compose up --build`), screenshots of UI + Langfuse traces
+- Record a 60s demo GIF/video
+- Finish drafting answers to Sections 3–15 of `learning/concepts/project_interview.md`
+- Lowest technical lift but this is what a recruiter actually opens before deciding to interview you.
 
-**D. README + interview prep polish:**
-- Write a real README.md (not the placeholder) with architecture diagram, quickstart, screenshots
-- Demo GIF/video of the chat UI hitting Langfuse traces
-- Finish drafting Sections 3–13 of `learning/concepts/project_interview.md`
-- Lower technical lift but high portfolio value — this is what a recruiter actually opens.
+**D. Image-size optimization:**
+- Switch torch to CPU-only wheel: `pip install torch --index-url https://download.pytorch.org/whl/cpu` saves ~600 MB
+- Investigate dropping `sentence-transformers` in favor of Chroma's default embedder
+- Add `USER appuser` for non-root runtime
+- Pin base image to a SHA digest
+- Concepts: SBOM, image scanning (`docker scout` or `trivy`), reproducibility.
 
-**Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is at the Interview-Ready Shape phase — focus on polishing what exists and wiring the parts together rather than adding new agent capabilities.
+**Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is at the Interview-Ready Shape phase — focus on polishing what exists rather than adding new agent capabilities.

@@ -6,7 +6,10 @@ import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "docs")
-CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db")
+CHROMA_DIR = os.getenv(
+    "CHROMA_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "chroma_db"),
+)
 
 
 def load_docs(docs_dir: str) -> list[dict]:
