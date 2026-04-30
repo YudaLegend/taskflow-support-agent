@@ -24,5 +24,64 @@ dependencies = [
 [dependency-groups]
 dev = [
     "faker>=40.13.0",
+    "httpx>=0.28.0",
     "pytest>=9.0.3",
+    "pytest-asyncio>=0.25.0",
+    "ruff>=0.14.0",
 ]
+
+
+# --- ruff: linter + formatter -----------------------------------------------
+# Why ruff? One Rust binary that does flake8 + black + isort + pyflakes,
+# ~100x faster. The defaults are sane; we keep config minimal.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "data/chroma_db",
+    "notebooks",
+]
+
+[tool.ruff.lint]
+# Rule families — start permissive, tighten later.
+#   E, W = pycodestyle (PEP 8 style)
+#   F    = pyflakes (real bugs: unused imports, undefined names)
+#   I    = isort (import ordering)
+#   B    = flake8-bugbear (likely bugs, e.g. mutable default args)
+#   UP   = pyupgrade (modernize syntax for target python version)
+select = ["E", "W", "F", "I", "B", "UP"]
+# Don't enforce line length on string literals or comments — annoying for
+# URLs and prose. Other E501 violations still flag.
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 fires on function calls in argument defaults. FastAPI's `Depends(...)`
+# is the canonical pattern and intentional; whitelist it (and a couple of
+# other FastAPI helpers we don't currently use but might).
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files often have unused fixtures and long parameter lists; relax there.
+"tests/*" = ["F401", "F811"]
+# The eval scripts have lots of inline experiment code; not worth linting strictly.
+"eval/*"  = ["E", "B"]
+# rag/rerank.py is a deliberate skeleton (TODOs unfilled, see HANDOFF.md).
+"rag/rerank.py" = ["F841"]
+
+
+# --- pytest -----------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# `asyncio_mode = auto` means any `async def test_*` is automatically run as
+# an asyncio test — no need to mark each one with @pytest.mark.asyncio.
+asyncio_mode = "auto"
+# Quiet output by default; flip to -v locally when debugging.
+addopts = "-q"

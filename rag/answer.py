@@ -1,9 +1,8 @@
 """RAG asnwerer - retrireve context, build prompt, call LLM"""
 
 
-from rag.retrieve import retrieve
 from agent.llm import chat
-
+from rag.retrieve import retrieve
 
 RAG_SYSTEM_PROMPT = """You are the customer support assistant for TaskFlow, \
 a web-based project management tool.
@@ -42,7 +41,7 @@ def format_context(results: list[dict]) -> str:
 
 def answer(question: str, k: int = 5) -> str:
     """Full RAG pipeline: retrieve → format → LLM → answer."""
-    # TODO 2: 
+    # TODO 2:
     # 1. Call retrieve(question, k) to get chunks
     # 2. Call format_context() to build the context string
     # 3. Build the system prompt by replacing {context} with the context

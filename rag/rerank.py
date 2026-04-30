@@ -13,7 +13,6 @@ Typical pattern:
 
 from sentence_transformers import CrossEncoder
 
-
 MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # Load once, reuse. Loading is slow (~seconds); scoring is fast.
@@ -67,6 +66,7 @@ def rerank(query: str, candidates: list[dict], k: int = 3) -> list[dict]:
 if __name__ == "__main__":
     # Smoke test: compare hybrid alone vs hybrid + rerank on a tricky query.
     import sys
+
     from rag.retrieve_hybrid import retrieve_hybrid
 
     q = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"

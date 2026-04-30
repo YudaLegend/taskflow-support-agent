@@ -9,7 +9,7 @@ The LLM never executes these directly — your orchestrator (LangGraph) will.
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
@@ -60,7 +60,7 @@ def search_docs(query: str, k: int = 3) -> dict:
     # This one is intentionally simple — the point is to see how an existing
     # function gets wrapped as a tool.
     return {"results": retrieve(query, k)}
-    
+
 
 
 # ============================  TOOL 2: get_user  ============================
@@ -93,7 +93,7 @@ def get_user(email: str) -> dict:
         return {"user": user_doc}
     else:
         return {"error": f"No user found with email {email}"}
-    
+
 
 
 # ========================  TOOL 3: list_user_tickets  ========================
@@ -176,7 +176,7 @@ def create_ticket(user_id: str, subject: str, body: str, priority: str = "medium
     db = _get_db()
     count = db.tickets.count_documents({})
     ticket_id = f"TF-{1000 + count}"
-    
+
     ticket = {
         "_id": ticket_id,
         "user_id": user_id,
@@ -185,10 +185,10 @@ def create_ticket(user_id: str, subject: str, body: str, priority: str = "medium
         "status": "open",
         "priority": priority,
         "category": "other",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
         "assigned_to": None
-    } 
+    }
     db.tickets.insert_one(ticket)
 
     return {"ticket_id": ticket_id, "message": "Ticket created successfully"}
@@ -248,7 +248,7 @@ TOOLS = {
 # The @tool decorator reads the function's docstring as the description
 # and uses the args_schema for the input schema.
 # ---------------------------------------------------------------------------
-from langchain_core.tools import tool
+from langchain_core.tools import tool  # noqa: E402  (decorator wraps the functions defined above)
 
 
 @tool(args_schema=SearchDocsInput)

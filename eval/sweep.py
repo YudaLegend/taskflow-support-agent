@@ -11,9 +11,10 @@ eval/RETRIEVAL_EXPERIMENTS.md automatically.
 import os
 from datetime import datetime
 
-from rag import ingest
-from eval.run_eval import run_eval
 from chromadb import PersistentClient
+
+from eval.run_eval import run_eval
+from rag import ingest
 
 EXPERIMENTS_MD = os.path.join(os.path.dirname(__file__), "RETRIEVAL_EXPERIMENTS.md")
 CHROMA_DIR = os.getenv(
@@ -31,17 +32,17 @@ CONFIGS = [
 
 def run_one(label: str, chunk_size: int, chunk_overlap: int,
             retriever: str, reranker: str, notes: str) -> dict:
-    
+
     collection = f"taskflow_docs_{chunk_size}_{chunk_overlap}"
     print(f"\n{'#'*60}\n# {label}  (chunk={chunk_size}, overlap={chunk_overlap})\n{'#'*60}")
 
     # 1. ingest
 
-    
+
     client = PersistentClient(path=CHROMA_DIR)
 
     existing = {c.name for c in client.list_collections()}
-    
+
     if collection not in existing:
         ingest.main(chunk_size=chunk_size, chunk_overlap=chunk_overlap, collection_name=collection)
     else:

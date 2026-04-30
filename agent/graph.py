@@ -12,19 +12,19 @@ The router (should_continue) checks: did the LLM emit a tool call or plain text?
 import os
 
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langgraph.graph import StateGraph, MessagesState, START, END
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import ToolNode
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_groq import ChatGroq
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode
 
-from agent.tools import LANGCHAIN_TOOLS
 from agent.guardrails import (
     MAX_TOOL_CALLS,
     REFUSAL_MESSAGE,
     is_out_of_scope,
 )
+from agent.tools import LANGCHAIN_TOOLS
 
 load_dotenv()
 
@@ -44,9 +44,8 @@ load_dotenv()
 # Langfuse v3 integration. CallbackHandler hooks into LangChain's callback
 # system — every LLM call, tool call, and node transition fires callback
 # events that the handler converts into spans in the Langfuse UI.
-from langfuse import Langfuse
-from langfuse.langchain import CallbackHandler
-
+from langfuse import Langfuse  # noqa: E402  (intentionally below the explanatory comment block)
+from langfuse.langchain import CallbackHandler  # noqa: E402
 
 _langfuse_client: "Langfuse | None" = None
 
@@ -214,7 +213,7 @@ def agent(state: MessagesState, config: RunnableConfig) -> dict:
     messages = state["messages"]
     if not messages or messages[0].type != "system":
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
-    
+
     response = llm_with_tools.invoke(messages, config=config)
 
     return {"messages": [response]}
@@ -300,7 +299,7 @@ def build_graph():
     # Compile with checkpointer for conversation memory.
     # MemorySaver stores message history in RAM (per thread_id).
     return graph.compile(checkpointer=MemorySaver())
-    
+
 
 # ---------------------------------------------------------------------------
 # CLI for testing
@@ -362,7 +361,7 @@ if __name__ == "__main__":
         if tools_used:
             print(f"  → tools called this turn: {tools_used}")
         else:
-            print(f"  → NO tools called (answered from memory)")
+            print("  → NO tools called (answered from memory)")
         print(f"Agent: {all_msgs[-1].content[:400]}")
         return all_msgs[-1].content
 

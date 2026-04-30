@@ -2,7 +2,7 @@
 
 import os
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from faker import Faker
 from pymongo import MongoClient
@@ -115,7 +115,7 @@ def make_users(n: int, workspace_ids: list[str]) -> list[dict]:
 
 
 def _random_datetime_within_days(days_back: int) -> datetime:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     delta = timedelta(
         days=random.randint(0, days_back),
         hours=random.randint(0, 23),

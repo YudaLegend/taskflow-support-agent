@@ -17,10 +17,11 @@ from pymongo.errors import PyMongoError
 
 from agent.graph import (
     build_graph,
-    get_langfuse_client as _agent_langfuse_client,
     get_langfuse_handler,
 )
-
+from agent.graph import (
+    get_langfuse_client as _agent_langfuse_client,
+)
 
 # ---------------------------------------------------------------------------
 # Heavyweight singletons — built once, reused for the lifetime of the process.

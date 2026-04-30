@@ -9,9 +9,9 @@ is fragile. RRF fuses *ranks* instead — scale-free, robust, one-liner math.
 
 import os
 import re
+
 import chromadb
 from rank_bm25 import BM25Okapi
-
 
 CHROMA_DIR = os.getenv(
     "CHROMA_PATH",
@@ -49,7 +49,7 @@ def _load_corpus(collection_name: str) -> dict:
     ids = []
     docs = []
     metadatas = []
-    for id, doc, meta in zip(raw["ids"], raw["documents"], raw["metadatas"]):
+    for id, doc, meta in zip(raw["ids"], raw["documents"], raw["metadatas"], strict=False):
         ids.append(id)
         docs.append(doc)
         metadatas.append(meta)
@@ -131,8 +131,8 @@ def retrieve_hybrid(
     #         and return a list[dict] shaped like retrieve.retrieve() does:
     #         [{"text": ..., "source": ..., "score": <fused_score>}, ...]
     corpus = _load_corpus(collection_name)
-    id_to_doc = {id: doc for id, doc in zip(corpus["ids"], corpus["docs"])}
-    id_to_meta = {id: meta for id, meta in zip(corpus["ids"], corpus["metadatas"])}
+    id_to_doc = dict(zip(corpus["ids"], corpus["docs"], strict=False))
+    id_to_meta = dict(zip(corpus["ids"], corpus["metadatas"], strict=False))
     results = []
     for doc_id in sorted_ids:
         results.append({

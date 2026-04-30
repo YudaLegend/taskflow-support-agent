@@ -2,13 +2,11 @@
 
 import json
 import os
-import sys
 
 from agent.llm import chat
 from rag.answer import answer, format_context
 from rag.retrieve import retrieve
 from rag.retrieve_hybrid import retrieve_hybrid
-
 
 GOLDEN_PATH = os.path.join(os.path.dirname(__file__), "golden.jsonl")
 
@@ -16,8 +14,8 @@ GOLDEN_PATH = os.path.join(os.path.dirname(__file__), "golden.jsonl")
 def load_golden(path: str) -> list[dict]:
     """Load question/expected pairs from JSONL."""
     # TODO 1: Read the file line by line, json.loads each line, return a list
-    
-    with open(path, "r", encoding="utf-8") as f:
+
+    with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
@@ -85,7 +83,7 @@ def hit_rate(retrieved_chunks: list[dict], expected_source: str | None) -> int:
     sources = {c["source"] for c in retrieved_chunks}
     # TODO A3: Return 1 if expected_source in that set, else 0
     return 1 if expected_source in sources else 0
-    
+
 
 
 def run_eval(retrieval_only: bool = False,retriever: str = "dense"):
@@ -101,7 +99,7 @@ def run_eval(retrieval_only: bool = False,retriever: str = "dense"):
         expected_source = case.get("source")  # may be None
         print(f"\n[{i}/{len(golden)}] {question}")
 
-        
+
         chunks_k3 = retrieve_fn(question, k=3)
         chunks_k5 = retrieve_fn(question, k=5)
 

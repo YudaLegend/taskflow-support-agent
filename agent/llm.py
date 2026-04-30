@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -7,7 +8,7 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
-DEFAULT_TEMPERATURE = 0.0 
+DEFAULT_TEMPERATURE = 0.0
 DEFAULT_MAX_TOKENS = 1024
 
 

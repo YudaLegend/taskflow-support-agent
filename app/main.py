@@ -21,8 +21,8 @@ swap in a persistent checkpointer).
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException

@@ -9,13 +9,12 @@ Usage:
 """
 
 import json
-import os
 import uuid
 from pathlib import Path
 
 from langchain_core.messages import HumanMessage
 
-from agent.graph import build_graph, get_langfuse_handler, flush_langfuse
+from agent.graph import build_graph, flush_langfuse, get_langfuse_handler
 from agent.guardrails import REFUSAL_MESSAGE
 
 SCENARIOS_PATH = Path(__file__).parent / "agent_scenarios.jsonl"
