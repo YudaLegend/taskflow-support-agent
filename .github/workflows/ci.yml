@@ -1,0 +1,117 @@
+# GitHub Actions CI for the TaskFlow Support Agent.
+#
+# Three jobs run in parallel on every push and every pull request:
+#   - lint          : ruff format check + ruff lint
+#   - test          : uv sync + pytest
+#   - docker-build  : multi-stage Docker build with GHA cache; pushes to
+#                     GitHub Container Registry only on merges to main.
+#
+# Total wall time is the slowest job (parallelism). On a clean run this
+# is dominated by docker-build (~10 min cold, ~2 min warm).
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]      # every branch — gives feedback even on side branches
+  pull_request:
+    branches: [main]      # required gate before merging into main
+
+# Cancel an in-flight run for the same ref if a newer commit lands —
+# saves runner minutes when you push twice quickly.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Lint — ruff (formatter + linter, replaces flake8 + black + isort).
+  # Cheap (~30s) so it runs first as a fail-fast signal.
+  # -------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Invalidate uv's cache only when the lockfile changes.
+          cache-dependency-glob: "uv.lock"
+
+      - name: Sync dev deps
+        run: uv sync --dev --frozen
+
+      - name: ruff check
+        run: uv run ruff check .
+
+      - name: ruff format --check
+        run: uv run ruff format --check .
+
+  # -------------------------------------------------------------------------
+  # Test — pytest against the FastAPI app with mocked dependencies.
+  # No Groq calls, no Langfuse, no Mongo, no Docker required.
+  # -------------------------------------------------------------------------
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: "uv.lock"
+
+      - name: Sync deps
+        run: uv sync --dev --frozen
+
+      - name: Run pytest
+        # GROQ_API_KEY needs SOMETHING set to import agent.graph (it constructs
+        # a ChatGroq client at module load time). The test fixtures never
+        # actually call the LLM, so a fake value is enough.
+        env:
+          GROQ_API_KEY: test-key-not-used
+        run: uv run pytest
+
+  # -------------------------------------------------------------------------
+  # Docker build — verifies the Dockerfile still works.
+  # Pushes to GHCR ONLY on push to main (not on PRs from forks, which
+  # wouldn't have GHCR write access anyway).
+  # -------------------------------------------------------------------------
+  docker-build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write    # required to push to ghcr.io/<owner>/<repo>
+    steps:
+      - uses: actions/checkout@v4
+
+      # Buildx is needed for multi-stage cache + cross-platform support.
+      - uses: docker/setup-buildx-action@v3
+
+      # Log in to GHCR (only for the eventual push step; pulls don't need it).
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}    # auto-provided by GHA
+
+      - name: Build (and push on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # PR runs build but don't push (no creds, no need to publish PR images).
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          # GHA cache backend — caches the deps layer across runs so reruns
+          # are minutes, not hours. `mode=max` caches every layer (vs only
+          # the final one). Cost: a few hundred MB in your repo's GHA cache.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
