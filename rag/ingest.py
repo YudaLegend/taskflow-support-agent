@@ -1,5 +1,4 @@
-""" Load Taskflwo docs,chunk,embed and store in ChromaDB"""
-
+"""Load Taskflwo docs,chunk,embed and store in ChromaDB"""
 
 import os
 
@@ -64,6 +63,7 @@ def chunk_docs(
     #
     return (texts, metadatas)
 
+
 def store_in_chroma(
     texts: list[str],
     metadatas: list[dict],
@@ -106,6 +106,7 @@ if __name__ == "__main__":
     # TODO D2: Parse sys.argv so you can sweep configs from the CLI,
     # e.g. `python -m rag.ingest 200 20 taskflow_docs_200`
     import sys
+
     args = sys.argv[1:]
     if args:
         chunk_size = int(args[0])

@@ -65,6 +65,7 @@ load_dotenv()
 #               exact pain point you hit on Day 18).
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # TODO A — startup: call get_graph() once to compile the graph eagerly
@@ -94,6 +95,7 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_turn_tools(messages: list) -> list[str]:
     """Return tool names called during the most recent turn.
@@ -156,6 +158,7 @@ def _new_request_id() -> str:
 # GET /health — liveness + dependency check
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     """Cheap dependency check. Returns 200 even if degraded — the body
@@ -185,12 +188,13 @@ async def health() -> HealthResponse:
 #   5. Returns ChatResponse.
 # ---------------------------------------------------------------------------
 
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     req: ChatRequest,
-    graph = Depends(get_graph),
-    langfuse_handler = Depends(get_langfuse),
-    langfuse_client = Depends(get_langfuse_client),
+    graph=Depends(get_graph),
+    langfuse_handler=Depends(get_langfuse),
+    langfuse_client=Depends(get_langfuse_client),
 ) -> ChatResponse:
     """Send one user message; get one assistant reply.
 
@@ -229,12 +233,11 @@ async def chat(
     tools_used = _extract_turn_tools(result["messages"])
     # TODO 6: Return ChatResponse(...).
     return ChatResponse(
-        request_id= request_id,
-        thread_id= req.thread_id,
-        response= final_text,
-        tools_used=  tools_used,
+        request_id=request_id,
+        thread_id=req.thread_id,
+        response=final_text,
+        tools_used=tools_used,
     )
-
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +254,7 @@ async def chat(
 # instead of waiting for the whole answer.
 # ---------------------------------------------------------------------------
 
+
 def _sse(payload: dict) -> str:
     """Format a dict as one SSE 'data:' frame.
 
@@ -263,9 +267,9 @@ def _sse(payload: dict) -> str:
 @app.post("/chat/stream")
 async def chat_stream(
     req: ChatRequest,
-    graph = Depends(get_graph),
-    langfuse_handler = Depends(get_langfuse),
-    langfuse_client = Depends(get_langfuse_client),
+    graph=Depends(get_graph),
+    langfuse_handler=Depends(get_langfuse),
+    langfuse_client=Depends(get_langfuse_client),
 ) -> StreamingResponse:
     """Stream the agent's response as Server-Sent Events.
 
@@ -316,12 +320,12 @@ async def chat_stream(
             kind = event["event"]
             if kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
-                if chunk.content:                  # may be empty for tool-call chunks
+                if chunk.content:  # may be empty for tool-call chunks
                     tokens_streamed += 1
                     yield _sse({"type": "token", "content": chunk.content})
 
             elif kind == "on_tool_start":
-                name = event["name"]               # e.g. "search_docs_tool"
+                name = event["name"]  # e.g. "search_docs_tool"
                 tools_used.append(name)
                 yield _sse({"type": "tool_start", "name": name})
 
@@ -333,20 +337,20 @@ async def chat_stream(
         # it from the graph state and emit it as a single token frame so the
         # client bubble isn't empty.
         if tokens_streamed == 0:
-            state = await graph.aget_state(
-                {"configurable": {"thread_id": req.thread_id}}
-            )
+            state = await graph.aget_state({"configurable": {"thread_id": req.thread_id}})
             messages = state.values.get("messages", [])
             if messages and messages[-1].type == "ai" and messages[-1].content:
                 yield _sse({"type": "token", "content": messages[-1].content})
 
         # Final marker so the client knows it's safe to close the connection.
-        yield _sse({
-            "type": "done",
-            "request_id": request_id,
-            "thread_id": req.thread_id,
-            "tools_used": tools_used,
-        })
+        yield _sse(
+            {
+                "type": "done",
+                "request_id": request_id,
+                "thread_id": req.thread_id,
+                "tools_used": tools_used,
+            }
+        )
 
     # StreamingResponse takes the async generator and streams whatever it
     # yields to the client. media_type sets Content-Type; X-Accel-Buffering
@@ -371,10 +375,11 @@ async def chat_stream(
 # that the user disliked. Closes the prod-eval feedback loop.
 # ---------------------------------------------------------------------------
 
+
 @app.post("/feedback", status_code=204)
 async def feedback(
     req: FeedbackRequest,
-    langfuse_client = Depends(get_langfuse_client),
+    langfuse_client=Depends(get_langfuse_client),
 ) -> None:
     """Attach a user score to a previous /chat response's Langfuse trace.
 
@@ -410,6 +415,7 @@ async def feedback(
 # Mount order matters: register specific routes BEFORE the catch-all mount,
 # otherwise StaticFiles would shadow /chat, /health, etc.
 # ---------------------------------------------------------------------------
+
 
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:

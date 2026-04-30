@@ -92,6 +92,12 @@ jobs:
       # Buildx is needed for multi-stage cache + cross-platform support.
       - uses: docker/setup-buildx-action@v3
 
+      # GitHub usernames can be mixed-case (YudaLegend) but Docker/OCI
+      # registry tags MUST be lowercase. Compute the lowercase repo name
+      # once here and reference it via env in subsequent steps.
+      - name: Compute lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       # Log in to GHCR (only for the eventual push step; pulls don't need it).
       - name: Log in to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -108,8 +114,8 @@ jobs:
           # PR runs build but don't push (no creds, no need to publish PR images).
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
           # GHA cache backend — caches the deps layer across runs so reruns
           # are minutes, not hours. `mode=max` caches every layer (vs only
           # the final one). Cost: a few hundred MB in your repo's GHA cache.

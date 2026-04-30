@@ -9,10 +9,10 @@ import pytest
 
 from agent.guardrails import is_out_of_scope, redact_pii
 
-
 # ---------------------------------------------------------------------------
 # is_out_of_scope
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "text",
@@ -60,6 +60,7 @@ def test_case_insensitive() -> None:
 # ---------------------------------------------------------------------------
 # redact_pii
 # ---------------------------------------------------------------------------
+
 
 def test_redacts_email() -> None:
     """Emails must be replaced with [EMAIL]."""

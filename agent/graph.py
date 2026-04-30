@@ -65,7 +65,7 @@ def get_langfuse_handler():
     global _langfuse_client
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host       = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+    host = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
 
     if not (public_key and secret_key):
         return None
@@ -92,6 +92,7 @@ def get_langfuse_client():
     if _langfuse_client is None:
         get_langfuse_handler()
     return _langfuse_client
+
 
 # ---------------------------------------------------------------------------
 # System prompt — defines the agent's persona and rules
@@ -144,7 +145,7 @@ llm = ChatGroq(
     model="meta-llama/llama-4-scout-17b-16e-instruct",
     temperature=0,
     api_key=os.getenv("GROQ_API_KEY"),
-    )
+)
 
 llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
 
@@ -156,6 +157,7 @@ llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
 # LLM gets prompt-injected into ignoring its system prompt, this check
 # still fires because the LLM is never invoked for refused inputs.
 # ---------------------------------------------------------------------------
+
 
 def guard_input(state: MessagesState) -> dict:
     """Inspect the latest user message; short-circuit if out-of-scope."""
@@ -178,6 +180,7 @@ def route_after_guard(state: MessagesState) -> str:
 # ---------------------------------------------------------------------------
 # Node 1: agent — calls the LLM
 # ---------------------------------------------------------------------------
+
 
 def agent(state: MessagesState, config: RunnableConfig) -> dict:
     """Call the LLM with the conversation history + tool definitions.
@@ -235,12 +238,13 @@ def agent(state: MessagesState, config: RunnableConfig) -> dict:
 #
 # This is pure scaffolding — one line.
 
-tool_node = ToolNode(LANGCHAIN_TOOLS) # ← replace this
+tool_node = ToolNode(LANGCHAIN_TOOLS)  # ← replace this
 
 
 # ---------------------------------------------------------------------------
 # Router: should the loop continue or exit?
 # ---------------------------------------------------------------------------
+
 
 def should_continue(state: MessagesState) -> str:
     """Decide whether to route to tools or end the conversation.
@@ -272,6 +276,7 @@ def should_continue(state: MessagesState) -> str:
 # ---------------------------------------------------------------------------
 # Build the graph
 # ---------------------------------------------------------------------------
+
 
 def build_graph():
     """Assemble the ReAct agent graph and compile it."""

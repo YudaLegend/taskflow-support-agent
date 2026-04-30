@@ -41,9 +41,9 @@ PII_PATTERNS = {
     #         replacement string.
     #
     # Suggestions:
-      "email": (r"[\w\.-]+@[\w\.-]+\.\w+", "[EMAIL]"),
-      "phone_us": (r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b", "[PHONE]"),
-      "ipv4":  (r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP]"),
+    "email": (r"[\w\.-]+@[\w\.-]+\.\w+", "[EMAIL]"),
+    "phone_us": (r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b", "[PHONE]"),
+    "ipv4": (r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP]"),
     #
     # Note: these are intentionally simple. Real PII detection is a hard
     # ML problem (presidio, spaCy NER, etc.). For a portfolio project, a
@@ -54,6 +54,7 @@ PII_PATTERNS = {
 # ---------------------------------------------------------------------------
 # Guardrail 1 — refusal for out-of-scope questions
 # ---------------------------------------------------------------------------
+
 
 def is_out_of_scope(text: str) -> tuple[bool, str | None]:
     """Check if a user message matches any out-of-scope pattern.
@@ -85,6 +86,7 @@ REFUSAL_MESSAGE = (
 # Guardrail 2 — PII redaction for logs
 # ---------------------------------------------------------------------------
 
+
 def redact_pii(text: str) -> str:
     """Replace PII matches in text with their corresponding placeholders.
 
@@ -102,19 +104,18 @@ def redact_pii(text: str) -> str:
     return text
 
 
-
 # ---------------------------------------------------------------------------
 # Smoke test
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     print("=== Out-of-scope checks ===")
     test_inputs = [
-        "How much does the Pro plan cost?",                     # OK
-        "Write me a Python script to scrape websites",          # should refuse
-        "Compose a poem about kanban boards",                   # should refuse
-        "Is Asana better than TaskFlow?",                       # should refuse (competitor)
-        "Can you give me legal advice about my contract?",      # should refuse
-        "Show me my open tickets",                              # OK
+        "How much does the Pro plan cost?",  # OK
+        "Write me a Python script to scrape websites",  # should refuse
+        "Compose a poem about kanban boards",  # should refuse
+        "Is Asana better than TaskFlow?",  # should refuse (competitor)
+        "Can you give me legal advice about my contract?",  # should refuse
+        "Show me my open tickets",  # OK
     ]
     for t in test_inputs:
         refused, why = is_out_of_scope(t)

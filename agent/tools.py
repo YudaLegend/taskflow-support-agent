@@ -37,9 +37,13 @@ def _get_db():
 
 # ===========================  TOOL 1: search_docs  ===========================
 
+
 class SearchDocsInput(BaseModel):
     """Schema the LLM fills in when it wants to search the knowledge base."""
-    query: str = Field(description="Natural-language search query about TaskFlow features, pricing, or usage")
+
+    query: str = Field(
+        description="Natural-language search query about TaskFlow features, pricing, or usage"
+    )
     k: int = Field(default=3, ge=1, le=10, description="Number of doc chunks to return")
 
 
@@ -62,11 +66,12 @@ def search_docs(query: str, k: int = 3) -> dict:
     return {"results": retrieve(query, k)}
 
 
-
 # ============================  TOOL 2: get_user  ============================
+
 
 class GetUserInput(BaseModel):
     """Schema the LLM fills in when it needs to look up a user."""
+
     email: str = Field(description="The user's email address to look up")
 
 
@@ -95,13 +100,17 @@ def get_user(email: str) -> dict:
         return {"error": f"No user found with email {email}"}
 
 
-
 # ========================  TOOL 3: list_user_tickets  ========================
+
 
 class ListUserTicketsInput(BaseModel):
     """Schema the LLM fills in when it needs to see a user's support tickets."""
+
     user_id: str = Field(description="The user's ID (e.g. 'user_0001')")
-    status: str | None = Field(default=None, description="Optional filter: 'open', 'in_progress', 'waiting_customer', 'resolved', or 'closed'")
+    status: str | None = Field(
+        default=None,
+        description="Optional filter: 'open', 'in_progress', 'waiting_customer', 'resolved', or 'closed'",
+    )
 
 
 def list_user_tickets(user_id: str, status: str | None = None) -> dict:
@@ -133,12 +142,16 @@ def list_user_tickets(user_id: str, status: str | None = None) -> dict:
 
 # =========================  TOOL 4: create_ticket  =========================
 
+
 class CreateTicketInput(BaseModel):
     """Schema the LLM fills in when it needs to create a new support ticket."""
+
     user_id: str = Field(description="The user's ID (e.g. 'user_0001')")
     subject: str = Field(min_length=5, max_length=200, description="Brief summary of the issue")
     body: str = Field(min_length=10, description="Detailed description of the issue")
-    priority: str = Field(default="medium", description="Ticket priority: 'low', 'medium', 'high', or 'urgent'")
+    priority: str = Field(
+        default="medium", description="Ticket priority: 'low', 'medium', 'high', or 'urgent'"
+    )
 
 
 def create_ticket(user_id: str, subject: str, body: str, priority: str = "medium") -> dict:
@@ -187,7 +200,7 @@ def create_ticket(user_id: str, subject: str, body: str, priority: str = "medium
         "category": "other",
         "created_at": datetime.now(UTC).isoformat(),
         "updated_at": datetime.now(UTC).isoformat(),
-        "assigned_to": None
+        "assigned_to": None,
     }
     db.tickets.insert_one(ticket)
 
@@ -196,8 +209,10 @@ def create_ticket(user_id: str, subject: str, body: str, priority: str = "medium
 
 # ========================  TOOL 5: escalate_to_human  ========================
 
+
 class EscalateToHumanInput(BaseModel):
     """Schema the LLM fills in when it decides the issue needs a human agent."""
+
     reason: str = Field(description="Why this conversation needs human attention")
 
 
@@ -221,7 +236,7 @@ def escalate_to_human(reason: str) -> dict:
     return {
         "escalated": True,
         "reason": reason,
-        "message": "I've escalated this to our support team. A human agent will reach out to you shortly."
+        "message": "I've escalated this to our support team. A human agent will reach out to you shortly.",
     }
 
 
@@ -230,11 +245,11 @@ def escalate_to_human(reason: str) -> dict:
 # LangGraph will use this to wire tools into the agent graph.
 # ---------------------------------------------------------------------------
 TOOLS = {
-    "search_docs":       (search_docs,       SearchDocsInput),
-    "get_user":          (get_user,           GetUserInput),
-    "list_user_tickets": (list_user_tickets,  ListUserTicketsInput),
-    "create_ticket":     (create_ticket,      CreateTicketInput),
-    "escalate_to_human": (escalate_to_human,  EscalateToHumanInput),
+    "search_docs": (search_docs, SearchDocsInput),
+    "get_user": (get_user, GetUserInput),
+    "list_user_tickets": (list_user_tickets, ListUserTicketsInput),
+    "create_ticket": (create_ticket, CreateTicketInput),
+    "escalate_to_human": (escalate_to_human, EscalateToHumanInput),
 }
 
 
@@ -337,7 +352,14 @@ if __name__ == "__main__":
         print(list_user_tickets(sample_user["_id"]))
 
         print("\n=== create_ticket ===")
-        print(create_ticket(sample_user["_id"], "Test ticket from smoke test", "This is a test ticket created during Day 13 development.", "low"))
+        print(
+            create_ticket(
+                sample_user["_id"],
+                "Test ticket from smoke test",
+                "This is a test ticket created during Day 13 development.",
+                "low",
+            )
+        )
 
     print("\n=== escalate_to_human ===")
     print(escalate_to_human("User requested to speak with a human agent"))

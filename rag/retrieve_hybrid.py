@@ -123,7 +123,6 @@ def retrieve_hybrid(
     for rank, doc_id in enumerate(bm25_ids, start=1):
         rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (rrf_k + rank)
 
-
     # TODO 6: sort ids by fused score descending, take top k.
     sorted_ids = sorted(rrf_scores.keys(), key=lambda id: rrf_scores[id], reverse=True)[:k]
 
@@ -135,15 +134,19 @@ def retrieve_hybrid(
     id_to_meta = dict(zip(corpus["ids"], corpus["metadatas"], strict=False))
     results = []
     for doc_id in sorted_ids:
-        results.append({
-            "text": id_to_doc[doc_id],
-            "source": id_to_meta[doc_id].get("source", "unknown"),
-            "score": rrf_scores[doc_id],
-        })
+        results.append(
+            {
+                "text": id_to_doc[doc_id],
+                "source": id_to_meta[doc_id].get("source", "unknown"),
+                "score": rrf_scores[doc_id],
+            }
+        )
     return results
+
 
 if __name__ == "__main__":
     import sys
+
     q = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"
     results = retrieve_hybrid(q, k=3)
     print(f"\nQuery: {q}\n")

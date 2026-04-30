@@ -81,9 +81,7 @@ def make_subscriptions(n: int) -> list[dict]:
                 "plan": plan,
                 "billing_cycle": cycle,
                 "seats": seats,
-                "status": random.choices(
-                    SUB_STATUSES, weights=[80, 8, 5, 7], k=1
-                )[0],
+                "status": random.choices(SUB_STATUSES, weights=[80, 8, 5, 7], k=1)[0],
                 "current_period_start": start.isoformat(),
                 "current_period_end": end.isoformat(),
                 "payment_method": random.choice(
@@ -105,9 +103,7 @@ def make_users(n: int, workspace_ids: list[str]) -> list[dict]:
                 "full_name": fake.name(),
                 "company": fake.company(),
                 "signup_date": signup.isoformat(),
-                "status": random.choices(
-                    USER_STATUSES, weights=[92, 5, 3], k=1
-                )[0],
+                "status": random.choices(USER_STATUSES, weights=[92, 5, 3], k=1)[0],
                 "workspace_id": random.choice(workspace_ids),
             }
         )
@@ -148,9 +144,7 @@ def make_tickets(n: int, users: list[dict]) -> list[dict]:
                 "subject": subject,
                 "description": fake.paragraph(nb_sentences=3),
                 "status": status,
-                "priority": random.choices(
-                    TICKET_PRIORITIES, weights=[30, 40, 20, 10], k=1
-                )[0],
+                "priority": random.choices(TICKET_PRIORITIES, weights=[30, 40, 20, 10], k=1)[0],
                 "category": category,
                 "created_at": created_at.isoformat(),
                 "updated_at": updated_at.isoformat(),
@@ -171,9 +165,7 @@ def make_usage_events(n: int, users: list[dict]) -> list[dict]:
             metadata = {"project_id": f"proj_{random.randint(1, 100):04d}"}
         elif event_type == "api_call":
             metadata = {
-                "endpoint": random.choice(
-                    ["/tasks", "/users", "/projects", "/tasks/bulk"]
-                ),
+                "endpoint": random.choice(["/tasks", "/users", "/projects", "/tasks/bulk"]),
                 "status_code": random.choices([200, 400, 429, 500], weights=[85, 8, 5, 2], k=1)[0],
             }
         elif event_type == "login":

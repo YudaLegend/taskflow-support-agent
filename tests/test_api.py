@@ -12,10 +12,10 @@ Coverage:
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-
 # ---------------------------------------------------------------------------
 # /health
 # ---------------------------------------------------------------------------
+
 
 def test_health_ok(client, monkeypatch) -> None:
     """When both deps are healthy, /health returns 200 + status='ok'."""
@@ -47,6 +47,7 @@ def test_health_degraded_when_mongo_down(client, monkeypatch) -> None:
 # /chat
 # ---------------------------------------------------------------------------
 
+
 def test_chat_happy_path(client, fake_graph) -> None:
     """A valid request returns 200 with response, request_id, and empty tools_used."""
     fake_graph.canned_messages = [
@@ -73,9 +74,7 @@ def test_chat_extracts_tools_used(client, fake_graph) -> None:
         HumanMessage(content="prices?"),
         AIMessage(
             content="",
-            tool_calls=[
-                {"name": "search_docs_tool", "args": {}, "id": "c0", "type": "tool_call"}
-            ],
+            tool_calls=[{"name": "search_docs_tool", "args": {}, "id": "c0", "type": "tool_call"}],
         ),
         AIMessage(content="The Pro plan is $12/mo."),
     ]
@@ -101,6 +100,7 @@ def test_chat_rejects_empty_message(client) -> None:
 # ---------------------------------------------------------------------------
 # /feedback
 # ---------------------------------------------------------------------------
+
 
 def test_feedback_returns_503_when_langfuse_unconfigured(client) -> None:
     """The `client` fixture overrides get_langfuse_client to return None — /feedback

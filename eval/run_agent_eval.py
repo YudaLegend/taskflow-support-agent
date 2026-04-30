@@ -96,11 +96,13 @@ def check_assertions(scenario: dict, result: dict) -> list[dict]:
         expected = a["tools_called_contains"]
         actual = result["tool_calls"]
         missing = [t for t in expected if t not in actual]
-        checks.append({
-            "name": "tools_called_contains",
-            "passed": len(missing) == 0,
-            "detail": f"expected⊇{expected}, actual={actual}, missing={missing}",
-        })
+        checks.append(
+            {
+                "name": "tools_called_contains",
+                "passed": len(missing) == 0,
+                "detail": f"expected⊇{expected}, actual={actual}, missing={missing}",
+            }
+        )
 
     # tools_called_ordered — listed tools appear in this exact order (others may be interleaved)
     if "tools_called_ordered" in a:
@@ -110,53 +112,63 @@ def check_assertions(scenario: dict, result: dict) -> list[dict]:
         for tool in actual:
             if idx < len(expected) and tool == expected[idx]:
                 idx += 1
-        checks.append({
-            "name": "tools_called_ordered",
-            "passed": idx == len(expected),
-            "detail": f"expected order={expected}, actual={actual}, matched={idx}/{len(expected)}",
-        })
+        checks.append(
+            {
+                "name": "tools_called_ordered",
+                "passed": idx == len(expected),
+                "detail": f"expected order={expected}, actual={actual}, matched={idx}/{len(expected)}",
+            }
+        )
 
     # tools_not_called — none of these tools were used
     if "tools_not_called" in a:
         forbidden = a["tools_not_called"]
         actual = result["tool_calls"]
         violations = [t for t in forbidden if t in actual]
-        checks.append({
-            "name": "tools_not_called",
-            "passed": len(violations) == 0,
-            "detail": f"forbidden={forbidden}, actual={actual}, violations={violations}",
-        })
+        checks.append(
+            {
+                "name": "tools_not_called",
+                "passed": len(violations) == 0,
+                "detail": f"forbidden={forbidden}, actual={actual}, violations={violations}",
+            }
+        )
 
     # response_contains — every listed substring appears (case-insensitive)
     if "response_contains" in a:
         expected = a["response_contains"]
         response_lower = result["final_response"].lower()
         missing = [s for s in expected if s.lower() not in response_lower]
-        checks.append({
-            "name": "response_contains",
-            "passed": len(missing) == 0,
-            "detail": f"missing substrings: {missing}",
-        })
+        checks.append(
+            {
+                "name": "response_contains",
+                "passed": len(missing) == 0,
+                "detail": f"missing substrings: {missing}",
+            }
+        )
 
     # response_refused — final response matches the canonical refusal message
     if "response_refused" in a:
         expected = a["response_refused"]
         actual = result["final_response"].strip() == REFUSAL_MESSAGE.strip()
-        checks.append({
-            "name": "response_refused",
-            "passed": expected == actual,
-            "detail": f"expected={expected}, actual={actual}",
-        })
+        checks.append(
+            {
+                "name": "response_refused",
+                "passed": expected == actual,
+                "detail": f"expected={expected}, actual={actual}",
+            }
+        )
 
     # max_tool_calls — total calls ≤ this number (efficiency check)
     if "max_tool_calls" in a:
         limit = a["max_tool_calls"]
         actual = len(result["tool_calls"])
-        checks.append({
-            "name": "max_tool_calls",
-            "passed": actual <= limit,
-            "detail": f"limit={limit}, actual={actual}",
-        })
+        checks.append(
+            {
+                "name": "max_tool_calls",
+                "passed": actual <= limit,
+                "detail": f"limit={limit}, actual={actual}",
+            }
+        )
 
     return checks
 
@@ -195,14 +207,16 @@ def main() -> None:
             print(f"      {mark} {c['name']:25} — {c['detail']}")
         print()
 
-        all_results.append({
-            "id": scenario["id"],
-            "category": scenario["category"],
-            "passed": scenario_passed,
-            "tool_calls": result["tool_calls"],
-            "final_response": result["final_response"][:500],
-            "checks": checks,
-        })
+        all_results.append(
+            {
+                "id": scenario["id"],
+                "category": scenario["category"],
+                "passed": scenario_passed,
+                "tool_calls": result["tool_calls"],
+                "final_response": result["final_response"][:500],
+                "checks": checks,
+            }
+        )
 
     # Summary
     total = len(scenarios)

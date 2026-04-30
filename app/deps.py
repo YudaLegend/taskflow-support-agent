@@ -27,6 +27,7 @@ from agent.graph import (
 # Heavyweight singletons — built once, reused for the lifetime of the process.
 # ---------------------------------------------------------------------------
 
+
 @lru_cache(maxsize=1)
 def get_graph():
     """Return the compiled LangGraph agent (singleton).
@@ -62,6 +63,7 @@ def get_langfuse_client():
 # ---------------------------------------------------------------------------
 # Health checks — cheap pings for /health.
 # ---------------------------------------------------------------------------
+
 
 def check_mongo() -> bool:
     """Return True if MongoDB is reachable. Bounded by a 500ms timeout."""

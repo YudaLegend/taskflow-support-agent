@@ -1,6 +1,5 @@
 """RAG asnwerer - retrireve context, build prompt, call LLM"""
 
-
 from agent.llm import chat
 from rag.retrieve import retrieve
 
@@ -20,6 +19,7 @@ Keep your answers concise — 2-4 sentences for simple questions.
 ## Context
 {context}
 """
+
 
 def format_context(results: list[dict]) -> str:
     """Format retrieved chunks into a context string for the prompt.
@@ -52,16 +52,19 @@ def answer(question: str, k: int = 5) -> str:
     chunks = retrieve(question, k)
     context_str = format_context(chunks)
     system_message = RAG_SYSTEM_PROMPT.format(context=context_str)
-    reply = chat([
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": question},
-    ])
+    reply = chat(
+        [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": question},
+        ]
+    )
     return reply
+
 
 if __name__ == "__main__":
     import sys
+
     question = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"
     print(f"Question: {question}\n")
     reply = answer(question)
     print(f"Answer: {reply}")
-
