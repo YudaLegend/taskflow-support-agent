@@ -87,6 +87,22 @@ jobs:
       contents: read
       packages: write    # required to push to ghcr.io/<owner>/<repo>
     steps:
+      # GitHub's free Linux runners ship with ~14 GB free disk. Our image
+      # is ~3 GB and the build's intermediate layers + GHA cache push it
+      # over the edge ("No space left on device"). This action strips out
+      # preinstalled tooling we don't need (Android SDK, .NET, Haskell,
+      # CodeQL) — frees ~10+ GB in ~30s. Standard workaround for ML images.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false   # keep the GHA tool cache (uv etc. live there)
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true # remove preinstalled docker images we won't use
+          swap-storage: true
+
       - uses: actions/checkout@v4
 
       # Buildx is needed for multi-stage cache + cross-platform support.
