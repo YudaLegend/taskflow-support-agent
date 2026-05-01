@@ -82,7 +82,8 @@ taskflow-support-agent/
 | 20 | (skipped — Streamlit UI replaced by HTML+SSE in Day 19) | ⏭️ |
 | 21 | (deferred — tests + CI moved to Day 23) | ⏭️ |
 | 22 | Docker — multi-stage Dockerfile, env-var refactor, app service in compose | ✅ |
-| 23+ | Tests + CI, persistent checkpointer, README polish | ⏳ |
+| 23 | CI/CD — ruff + pytest + GitHub Actions (lint + test + docker build) | ✅ |
+| 24+ | Persistent checkpointer, README polish, image-size optimization | ⏳ |
 
 ### Day 11 progress so far
 
@@ -167,7 +168,7 @@ Stored in memory, but highlight:
 
 ## User's current state
 
-End of Day 22. Phase 4 is hardened — the entire stack (agent + Langfuse v3 + its 4 dependencies) comes up with `docker compose up --build`. Single image for the agent, bind-mounted ChromaDB index (no re-ingestion), MongoDB stays on host via `host.docker.internal`. End-to-end demo verified: chat UI → streaming response → Langfuse trace + 👍/👎 score, all running in containers.
+End of Day 23. Phase 4 is feature-complete and CI-protected. On every push and PR, GitHub Actions runs ruff (lint + format), pytest (33 tests across guardrails / helpers / API endpoints), and a Docker buildx that pushes to GHCR on merge to main. The whole stack still comes up with `docker compose up --build`; the demo loop (chat UI → streaming → Langfuse trace + score) works end-to-end. PR #1 (Day 23 CI) merged into main.
 
 ### Days 13–15 summary
 
@@ -364,6 +365,78 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `.env` — normalized line 1 (removed spaces around `=` so Docker's `--env-file` accepts it)
 - `learning/concepts/project_interview.md` — added Section 14 (FastAPI, Q85–103) and Section 15 (Docker, Q104–124)
 
+### Day 23 summary
+
+**Branching strategy used (worth keeping for future days):**
+- Created feature branch `day-23-ci`
+- Three logical commits (`chore:` ruff config + auto-fixes, `test:` pytest suite, `ci:` GHA workflow) — clean history, each commit independently revertable
+- Two `fix(ci):` commits for issues surfaced by the first run (format misses, lowercase-tag rule, runner disk space)
+- Opened PR #1, squash-merged into main with branch deletion
+
+**Step 2 — ruff config (one tool replaces flake8 + black + isort + pyupgrade):**
+- `[tool.ruff]` block in `pyproject.toml` — line length 100, target py311, exclude `.venv` / `data/chroma_db` / `notebooks`
+- Rule families: E/W (pycodestyle), F (pyflakes — real bugs), I (import order), B (bugbear), UP (pyupgrade)
+- `[tool.ruff.lint.flake8-bugbear].extend-immutable-calls` whitelists FastAPI's `Depends`, `Query`, `Path`, `Body`, `Header` — otherwise B008 fires on every endpoint signature (the standard FastAPI pattern would be marked as "function call in default")
+- Per-file ignores: `tests/*` relaxes F401/F811 (unused-fixture noise); `eval/*` relaxes E/B (experiment scripts); `rag/rerank.py` ignores F841 (skeleton with unfilled TODOs per HANDOFF)
+- Auto-fix pass touched 17 files: import sorting, `datetime.UTC` modernization, `zip(..., strict=False)` to silence B905
+- Manual fixes for E402: per-line `# noqa` on intentional late imports in `agent/graph.py` (Langfuse below explanatory comment block) and `agent/tools.py` (`@tool` decorator wraps the functions defined above)
+
+**Step 3 — pytest suite (33 tests, ~0.5s wall):**
+- `tests/conftest.py`: sets `GROQ_API_KEY=test-key-not-used` BEFORE importing app code (agent.graph constructs ChatGroq at module level). `FakeGraph` class with `async def ainvoke()` returning canned messages. `client` fixture wraps FastAPI's `TestClient`, monkeypatches `app.main.get_graph` (for the lifespan call) AND sets `app.dependency_overrides[get_graph] = lambda: fake_graph` (for the `Depends` calls in endpoints) — belt and suspenders.
+- `tests/test_guardrails.py`: 9 tests. Parametrized in/out-of-scope cases, case-insensitivity, PII redaction (email/phone/IPv4 with idempotency check on clean text).
+- `tests/test_helpers.py`: 5 tests for `_extract_turn_tools`. Most important: `test_only_walks_back_to_last_human_message` — ensures past-turn tool calls don't bleed into the current turn's `tools_used`.
+- `tests/test_api.py`: 9 endpoint tests. /health (ok + degraded), /chat (happy path + tool extraction + 422 validation for missing thread_id and empty message), /feedback (503 when langfuse_client is None + 422 for invalid rating + missing request_id).
+- **Deliberately NOT in CI**: the agent eval (`eval/run_agent_eval.py`) — it costs Groq tokens and is flaky on LLM-judgment edges. Belongs in a scheduled / manual workflow, not on every PR.
+
+**Step 5 — GitHub Actions workflow (`.github/workflows/ci.yml`):**
+- Triggers: `push` on every branch + `pull_request` against main. Concurrency group cancels in-flight runs when newer commits land — saves runner minutes during rapid pushes.
+- Three jobs run in parallel (wall time = slowest, not sum):
+  - **lint**: `astral-sh/setup-uv@v5` + `uv sync --dev --frozen` + `uv run ruff check .` + `uv run ruff format --check .` (~35s)
+  - **test**: same uv setup + `uv run pytest` with `GROQ_API_KEY=test-key-not-used` (~50s)
+  - **docker-build**: `jlumbroso/free-disk-space@main` step strips ~10 GB of preinstalled tooling (Android SDK, .NET, Haskell), then `docker/build-push-action@v6` with `cache-from/to: type=gha` for layer caching across runs. Pushes to GHCR with both `:latest` and `:${{ github.sha }}` tags only on push to main, NOT on PRs (~30 min cold cache).
+- Trick: GitHub usernames are mixed-case (`YudaLegend`) but OCI registry tags must be lowercase. A pre-step computes `IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}` (bash lowercase expansion) into `$GITHUB_ENV` for use in subsequent steps.
+
+**Issues surfaced by CI runs (the realistic experience):**
+
+| Round | Failure | Root cause | Fix |
+|---|---|---|---|
+| 1 | `lint` failed at `ruff check` | Forgot to `ruff format` the new test files; `tests/test_api.py` and `tests/test_guardrails.py` had unsorted imports | `ruff check --fix` + `ruff format` |
+| 1 | `docker-build` failed on `tags:` step | `invalid tag "ghcr.io/YudaLegend/...": repository name must be lowercase` | Add `IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}` env step |
+| 2 | `docker-build` crashed at 4m21s | "No space left on device" — 3 GB image + intermediates exhausted the runner's ~14 GB free | Add `jlumbroso/free-disk-space` step before checkout |
+| 3 | All green ✓ | — | — |
+
+**Stack pain points worth remembering:**
+- **`asyncio_mode = "auto"`** in `[tool.pytest.ini_options]` makes any `async def test_*` runnable without `@pytest.mark.asyncio` decoration. Saves boilerplate.
+- **FastAPI `app.dependency_overrides` is per-app, not per-test.** Always `app.dependency_overrides.clear()` in fixture teardown or earlier tests' overrides leak.
+- **Lifespan handler runs for `TestClient`.** If your lifespan calls `get_graph()` directly (not via `Depends`), the dependency override won't reach it — must `monkeypatch.setattr("app.main.get_graph", ...)` separately.
+- **GitHub Actions runners have ~14 GB free**, not 80 GB or whatever you remember. ML images often need disk-cleanup steps. `jlumbroso/free-disk-space` is the canonical workaround.
+- **Docker registry tag rules are stricter than git ref rules.** Tags must be lowercase + alnum + `._/-`. Use `${VAR,,}` bash lowercase OR `tr '[:upper:]' '[:lower:]'` to convert.
+- **`docker/build-push-action` with `cache-from/to: type=gha`** caches layers in GitHub's Actions cache (per-repo, ~10 GB limit). Subsequent builds skip dep installs when `pyproject.toml` and `uv.lock` are unchanged.
+- **PR-from-fork has no GHCR write access** — that's why we gate the push step on `github.event_name == 'push' && github.ref == 'refs/heads/main'`. Forks still build (validates the Dockerfile parses) without trying to push.
+
+**Key Day 23 learnings (interview-gold):**
+> **CI is a contract, not a chore.** "Lint + test + build pass" means the code on this branch satisfies the team's quality bar. A failing CI BLOCKS merge — that's the gate's whole point. A vacuous CI ("pytest runs against an empty test suite") is decorative and worse than no CI.
+>
+> **Two test layers, two cost profiles.** Pure-function tests (guardrails, helpers) are free, fast, and run on every commit. API tests with mocked deps cost ~1s and run on every commit. Agent eval (real LLM, real Langfuse) costs tokens + minutes and is flaky — belongs in a scheduled or manual workflow, not per-PR. Knowing which test goes where is the difference between "CI takes 2 minutes" and "CI takes 30 and burns through your Groq quota."
+>
+> **Layer caching saves both Docker builds AND CI minutes.** The same `COPY pyproject.toml uv.lock` BEFORE `COPY . .` trick that we used in Dockerfile (Day 22) also benefits GHA via `type=gha` cache backend (Day 23). One mental model, applied at two layers.
+>
+> **CI/CD is iterative.** First green run is normal to take 2-3 attempts. Each "fix(ci):" commit teaches a real lesson: line-ending differences (Windows CRLF vs Linux LF), tag-naming rules, runner disk constraints. Reading these failures and fixing them in a tight loop IS the skill.
+
+### Files added/modified on Day 23
+**Added:**
+- `tests/__init__.py` — package marker
+- `tests/conftest.py` — `FakeGraph`, `client` fixture, env-var setup
+- `tests/test_guardrails.py` — 9 pure-function tests for `is_out_of_scope` and `redact_pii`
+- `tests/test_helpers.py` — 5 tests for `_extract_turn_tools` (the backwards walk)
+- `tests/test_api.py` — 9 endpoint tests (/health, /chat, /feedback)
+- `.github/workflows/ci.yml` — three parallel jobs (lint, test, docker-build) with GHA cache + GHCR push gate
+
+**Modified:**
+- `pyproject.toml` — added `[tool.ruff]`, `[tool.ruff.lint]`, `[tool.ruff.lint.flake8-bugbear]`, `[tool.ruff.lint.per-file-ignores]`, `[tool.pytest.ini_options]`. New dev deps: `ruff`, `httpx`, `pytest-asyncio`
+- `uv.lock` — locked the new dev deps
+- 17 source files touched by `ruff format` + `ruff check --fix`: import sorting, `datetime.UTC` modernization, `strict=False` on `zip()`, per-line `# noqa: E402` for intentional late imports
+
 ### Open issues / still pending
 - `agent/llm.py` still uses `llama-3.3-70b-versatile` — fine for RAG answerer, but graph.py uses Llama 4 Scout
 - Reranker skeleton (`rag/rerank.py`) still has unfilled TODOs — skipped deliberately
@@ -382,33 +455,37 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - **Dockerfile runs as root.** Production hardening: add `RUN useradd -r appuser && chown -R appuser:appuser /app` and `USER appuser` near the end of the runtime stage.
 - **No image pinning.** `python:3.11-slim` floats — should be `python:3.11.X-slim-bookworm@sha256:...` for reproducibility before any prod deploy.
 - **No healthcheck instruction in the Dockerfile** — compose could declare one against `/health`, but we didn't.
+- **Docker job is the slowest CI step (~30 min cold).** The free-disk-space step adds ~30s. Improvement levers: switch to a CPU-only torch wheel (~600 MB smaller), or split the build into a separate workflow that only triggers on Dockerfile/dependency changes (currently runs on every commit).
+- **Agent eval not wired to CI yet.** `eval/run_agent_eval.py` costs Groq tokens and is flaky on LLM-judgment edges — belongs in a scheduled workflow, not per-PR. Day 24 candidate D.
+- **No README + no CI badge.** Recruiters scan repo READMEs first; ours is still the placeholder. Day 24 candidate A.
 
-### Next session — Day 23 candidates (pick one with user)
+### Next session — Day 24 candidates (pick one with user)
 
-**A. Tests + CI (highest engineering-discipline signal):**
-- `pytest` + `httpx.AsyncClient` against `app.main:app` for the API layer
-- `app.dependency_overrides[get_graph] = lambda: <fake_graph>` so tests don't need Groq/Langfuse running
-- Pure-function tests for `agent/guardrails.py` (regex, PII redaction) and `_extract_turn_tools`
-- GitHub Actions workflow: ruff + pytest on push. Optionally include the agent-eval scenarios as a separate scheduled job (not blocking PRs because LLM-as-judge is noisy).
-- **Recommended next.** Tests are what convert "it worked when I ran it" into "it works."
+**A. README + interview-prep polish (highest portfolio-value-per-hour):**
+- Write a real README.md with architecture diagram (Mermaid), quickstart (`docker compose up --build`), screenshots of UI + Langfuse traces, link to PR #1
+- Add a CI status badge to README (`![CI](...)`) — recruiters scan for these
+- Record a 60s demo GIF/video of the chat → trace → score loop
+- Finish drafting answers to Sections 3–15 of `learning/concepts/project_interview.md`
+- **Strongest recommendation.** This is what a recruiter actually opens before deciding to interview you. The product is shippable; now it needs to look shippable.
 
 **B. Persistent checkpointer (PostgresSaver):**
 - Swap `MemorySaver()` → `PostgresSaver(conn_string=...)` in `agent/graph.py`
 - Reuse the Langfuse Postgres or add a separate `taskflow-postgres` service in compose (cleaner — separation of concerns)
 - Conversations now survive `docker compose down/up`; multi-replica deploy becomes possible
-- Concepts: connection pooling, schema migration on first start, idempotent setup.
+- Concepts: connection pooling, schema migration on first start, idempotent setup. Tests in CI become more interesting (real DB or testcontainers).
 
-**C. README + interview-prep polish (highest portfolio-value-per-hour):**
-- Write a real README.md with architecture diagram (Mermaid), quickstart (`docker compose up --build`), screenshots of UI + Langfuse traces
-- Record a 60s demo GIF/video
-- Finish drafting answers to Sections 3–15 of `learning/concepts/project_interview.md`
-- Lowest technical lift but this is what a recruiter actually opens before deciding to interview you.
-
-**D. Image-size optimization:**
-- Switch torch to CPU-only wheel: `pip install torch --index-url https://download.pytorch.org/whl/cpu` saves ~600 MB
-- Investigate dropping `sentence-transformers` in favor of Chroma's default embedder
+**C. Image-size + production hardening:**
+- Switch torch to CPU-only wheel via `[tool.uv.sources]` extra-index in pyproject — saves ~600 MB
 - Add `USER appuser` for non-root runtime
-- Pin base image to a SHA digest
-- Concepts: SBOM, image scanning (`docker scout` or `trivy`), reproducibility.
+- Pin base image to a SHA digest for reproducibility
+- Add a `HEALTHCHECK` instruction to the Dockerfile (compose already references `/health`)
+- Add `trivy` or `docker scout` scan as a fourth CI job
+- Concepts: SBOM, image scanning, reproducibility. Visible win in `docker images` size column.
 
-**Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is at the Interview-Ready Shape phase — focus on polishing what exists rather than adding new agent capabilities.
+**D. Agent eval as a scheduled CI workflow:**
+- New `.github/workflows/agent-eval.yml` triggered weekly + manual `workflow_dispatch`
+- Runs the existing `eval/run_agent_eval.py` against real Groq + a Langfuse instance (via secrets)
+- Posts results as a GitHub release note or commit comment
+- Concepts: secrets management in GHA, scheduled workflows, the "test on every PR vs eval on a schedule" split.
+
+**Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is now in the Interview-Ready Shape phase — focus on polishing what exists rather than adding new agent capabilities.
