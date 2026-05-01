@@ -13,7 +13,6 @@ Typical pattern:
 
 from sentence_transformers import CrossEncoder
 
-
 MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # Load once, reuse. Loading is slow (~seconds); scoring is fast.
@@ -50,14 +49,11 @@ def rerank(query: str, candidates: list[dict], k: int = 3) -> list[dict]:
     #         Each pair is a 2-tuple of strings: (query, candidate["text"]).
     #         Shape: list[tuple[str, str]], length = len(candidates).
 
-
     # TODO 2: Call model.predict(pairs) — returns a numpy array of scores,
     #         one per pair, in the same order as `candidates`.
 
-
     # TODO 3: Attach each new score back to its candidate dict.
     #         Tip: zip(candidates, scores) and set candidate["score"] = float(s).
-
 
     # TODO 4: Sort candidates by "score" descending, return the top k.
     #         Reminder: cross-encoder scores are *higher = better*. This is
@@ -67,12 +63,13 @@ def rerank(query: str, candidates: list[dict], k: int = 3) -> list[dict]:
 if __name__ == "__main__":
     # Smoke test: compare hybrid alone vs hybrid + rerank on a tricky query.
     import sys
+
     from rag.retrieve_hybrid import retrieve_hybrid
 
     q = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"
 
-    stage1 = retrieve_hybrid(q, k=20)   # wide net
-    stage2 = rerank(q, stage1, k=3)      # sharp sort
+    stage1 = retrieve_hybrid(q, k=20)  # wide net
+    stage2 = rerank(q, stage1, k=3)  # sharp sort
 
     print(f"\nQuery: {q}\n")
     print("=== Stage 1 (hybrid, top-5 of 20) ===")

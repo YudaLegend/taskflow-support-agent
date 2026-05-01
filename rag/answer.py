@@ -1,9 +1,7 @@
 """RAG asnwerer - retrireve context, build prompt, call LLM"""
 
-
-from rag.retrieve import retrieve
 from agent.llm import chat
-
+from rag.retrieve import retrieve
 
 RAG_SYSTEM_PROMPT = """You are the customer support assistant for TaskFlow, \
 a web-based project management tool.
@@ -21,6 +19,7 @@ Keep your answers concise — 2-4 sentences for simple questions.
 ## Context
 {context}
 """
+
 
 def format_context(results: list[dict]) -> str:
     """Format retrieved chunks into a context string for the prompt.
@@ -42,7 +41,7 @@ def format_context(results: list[dict]) -> str:
 
 def answer(question: str, k: int = 5) -> str:
     """Full RAG pipeline: retrieve → format → LLM → answer."""
-    # TODO 2: 
+    # TODO 2:
     # 1. Call retrieve(question, k) to get chunks
     # 2. Call format_context() to build the context string
     # 3. Build the system prompt by replacing {context} with the context
@@ -53,16 +52,19 @@ def answer(question: str, k: int = 5) -> str:
     chunks = retrieve(question, k)
     context_str = format_context(chunks)
     system_message = RAG_SYSTEM_PROMPT.format(context=context_str)
-    reply = chat([
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": question},
-    ])
+    reply = chat(
+        [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": question},
+        ]
+    )
     return reply
+
 
 if __name__ == "__main__":
     import sys
+
     question = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"
     print(f"Question: {question}\n")
     reply = answer(question)
     print(f"Answer: {reply}")
-

@@ -12,19 +12,19 @@ The router (should_continue) checks: did the LLM emit a tool call or plain text?
 import os
 
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langgraph.graph import StateGraph, MessagesState, START, END
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import ToolNode
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_groq import ChatGroq
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode
 
-from agent.tools import LANGCHAIN_TOOLS
 from agent.guardrails import (
     MAX_TOOL_CALLS,
     REFUSAL_MESSAGE,
     is_out_of_scope,
 )
+from agent.tools import LANGCHAIN_TOOLS
 
 load_dotenv()
 
@@ -44,9 +44,8 @@ load_dotenv()
 # Langfuse v3 integration. CallbackHandler hooks into LangChain's callback
 # system — every LLM call, tool call, and node transition fires callback
 # events that the handler converts into spans in the Langfuse UI.
-from langfuse import Langfuse
-from langfuse.langchain import CallbackHandler
-
+from langfuse import Langfuse  # noqa: E402  (intentionally below the explanatory comment block)
+from langfuse.langchain import CallbackHandler  # noqa: E402
 
 _langfuse_client: "Langfuse | None" = None
 
@@ -66,7 +65,7 @@ def get_langfuse_handler():
     global _langfuse_client
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host       = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+    host = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
 
     if not (public_key and secret_key):
         return None
@@ -93,6 +92,7 @@ def get_langfuse_client():
     if _langfuse_client is None:
         get_langfuse_handler()
     return _langfuse_client
+
 
 # ---------------------------------------------------------------------------
 # System prompt — defines the agent's persona and rules
@@ -145,7 +145,7 @@ llm = ChatGroq(
     model="meta-llama/llama-4-scout-17b-16e-instruct",
     temperature=0,
     api_key=os.getenv("GROQ_API_KEY"),
-    )
+)
 
 llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
 
@@ -157,6 +157,7 @@ llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
 # LLM gets prompt-injected into ignoring its system prompt, this check
 # still fires because the LLM is never invoked for refused inputs.
 # ---------------------------------------------------------------------------
+
 
 def guard_input(state: MessagesState) -> dict:
     """Inspect the latest user message; short-circuit if out-of-scope."""
@@ -179,6 +180,7 @@ def route_after_guard(state: MessagesState) -> str:
 # ---------------------------------------------------------------------------
 # Node 1: agent — calls the LLM
 # ---------------------------------------------------------------------------
+
 
 def agent(state: MessagesState, config: RunnableConfig) -> dict:
     """Call the LLM with the conversation history + tool definitions.
@@ -214,7 +216,7 @@ def agent(state: MessagesState, config: RunnableConfig) -> dict:
     messages = state["messages"]
     if not messages or messages[0].type != "system":
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
-    
+
     response = llm_with_tools.invoke(messages, config=config)
 
     return {"messages": [response]}
@@ -236,12 +238,13 @@ def agent(state: MessagesState, config: RunnableConfig) -> dict:
 #
 # This is pure scaffolding — one line.
 
-tool_node = ToolNode(LANGCHAIN_TOOLS) # ← replace this
+tool_node = ToolNode(LANGCHAIN_TOOLS)  # ← replace this
 
 
 # ---------------------------------------------------------------------------
 # Router: should the loop continue or exit?
 # ---------------------------------------------------------------------------
+
 
 def should_continue(state: MessagesState) -> str:
     """Decide whether to route to tools or end the conversation.
@@ -274,6 +277,7 @@ def should_continue(state: MessagesState) -> str:
 # Build the graph
 # ---------------------------------------------------------------------------
 
+
 def build_graph():
     """Assemble the ReAct agent graph and compile it."""
 
@@ -300,7 +304,7 @@ def build_graph():
     # Compile with checkpointer for conversation memory.
     # MemorySaver stores message history in RAM (per thread_id).
     return graph.compile(checkpointer=MemorySaver())
-    
+
 
 # ---------------------------------------------------------------------------
 # CLI for testing
@@ -362,7 +366,7 @@ if __name__ == "__main__":
         if tools_used:
             print(f"  → tools called this turn: {tools_used}")
         else:
-            print(f"  → NO tools called (answered from memory)")
+            print("  → NO tools called (answered from memory)")
         print(f"Agent: {all_msgs[-1].content[:400]}")
         return all_msgs[-1].content
 

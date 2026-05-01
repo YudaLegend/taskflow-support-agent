@@ -9,9 +9,9 @@ is fragile. RRF fuses *ranks* instead — scale-free, robust, one-liner math.
 
 import os
 import re
+
 import chromadb
 from rank_bm25 import BM25Okapi
-
 
 CHROMA_DIR = os.getenv(
     "CHROMA_PATH",
@@ -49,7 +49,7 @@ def _load_corpus(collection_name: str) -> dict:
     ids = []
     docs = []
     metadatas = []
-    for id, doc, meta in zip(raw["ids"], raw["documents"], raw["metadatas"]):
+    for id, doc, meta in zip(raw["ids"], raw["documents"], raw["metadatas"], strict=False):
         ids.append(id)
         docs.append(doc)
         metadatas.append(meta)
@@ -123,7 +123,6 @@ def retrieve_hybrid(
     for rank, doc_id in enumerate(bm25_ids, start=1):
         rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (rrf_k + rank)
 
-
     # TODO 6: sort ids by fused score descending, take top k.
     sorted_ids = sorted(rrf_scores.keys(), key=lambda id: rrf_scores[id], reverse=True)[:k]
 
@@ -131,19 +130,23 @@ def retrieve_hybrid(
     #         and return a list[dict] shaped like retrieve.retrieve() does:
     #         [{"text": ..., "source": ..., "score": <fused_score>}, ...]
     corpus = _load_corpus(collection_name)
-    id_to_doc = {id: doc for id, doc in zip(corpus["ids"], corpus["docs"])}
-    id_to_meta = {id: meta for id, meta in zip(corpus["ids"], corpus["metadatas"])}
+    id_to_doc = dict(zip(corpus["ids"], corpus["docs"], strict=False))
+    id_to_meta = dict(zip(corpus["ids"], corpus["metadatas"], strict=False))
     results = []
     for doc_id in sorted_ids:
-        results.append({
-            "text": id_to_doc[doc_id],
-            "source": id_to_meta[doc_id].get("source", "unknown"),
-            "score": rrf_scores[doc_id],
-        })
+        results.append(
+            {
+                "text": id_to_doc[doc_id],
+                "source": id_to_meta[doc_id].get("source", "unknown"),
+                "score": rrf_scores[doc_id],
+            }
+        )
     return results
+
 
 if __name__ == "__main__":
     import sys
+
     q = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "How much does Pro cost?"
     results = retrieve_hybrid(q, k=3)
     print(f"\nQuery: {q}\n")

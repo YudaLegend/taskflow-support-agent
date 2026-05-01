@@ -17,14 +17,16 @@ from pymongo.errors import PyMongoError
 
 from agent.graph import (
     build_graph,
-    get_langfuse_client as _agent_langfuse_client,
     get_langfuse_handler,
 )
-
+from agent.graph import (
+    get_langfuse_client as _agent_langfuse_client,
+)
 
 # ---------------------------------------------------------------------------
 # Heavyweight singletons — built once, reused for the lifetime of the process.
 # ---------------------------------------------------------------------------
+
 
 @lru_cache(maxsize=1)
 def get_graph():
@@ -61,6 +63,7 @@ def get_langfuse_client():
 # ---------------------------------------------------------------------------
 # Health checks — cheap pings for /health.
 # ---------------------------------------------------------------------------
+
 
 def check_mongo() -> bool:
     """Return True if MongoDB is reachable. Bounded by a 500ms timeout."""

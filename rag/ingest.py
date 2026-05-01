@@ -1,7 +1,7 @@
-""" Load Taskflwo docs,chunk,embed and store in ChromaDB"""
-
+"""Load Taskflwo docs,chunk,embed and store in ChromaDB"""
 
 import os
+
 import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -14,10 +14,10 @@ CHROMA_DIR = os.getenv(
 
 def load_docs(docs_dir: str) -> list[dict]:
     """Read all .md files from docs_dir.
-    
+
     Return a list of dicts: [{"filename": "pricing-plans.md", "content": "..."}, ...]
     """
-    # TODO 1: 
+    # TODO 1:
     # Loop through all files in docs_dir
     # For each .md file, read its content
     # Append {"filename": filename, "content": text} to a list
@@ -25,10 +25,10 @@ def load_docs(docs_dir: str) -> list[dict]:
     docs = []
     for filename in os.listdir(docs_dir):
         if filename.endswith(".md"):
-            with open(os.path.join(docs_dir, filename), "r", encoding="utf-8") as f:
+            with open(os.path.join(docs_dir, filename), encoding="utf-8") as f:
                 content = f.read()
                 docs.append({"filename": filename, "content": content})
-    
+
     return docs
 
 
@@ -53,7 +53,7 @@ def chunk_docs(
     #   chunks = splitter.split_text(doc["content"])
     #
     texts = []
-    metadatas = []    
+    metadatas = []
     for doc in docs:
         chunks = splitter.split_text(doc["content"])
         metadatas.extend([{"source": doc["filename"]}] * len(chunks))
@@ -62,6 +62,7 @@ def chunk_docs(
     # and {"source": doc["filename"]} to a "metadatas" list
     #
     return (texts, metadatas)
+
 
 def store_in_chroma(
     texts: list[str],
@@ -105,6 +106,7 @@ if __name__ == "__main__":
     # TODO D2: Parse sys.argv so you can sweep configs from the CLI,
     # e.g. `python -m rag.ingest 200 20 taskflow_docs_200`
     import sys
+
     args = sys.argv[1:]
     if args:
         chunk_size = int(args[0])
