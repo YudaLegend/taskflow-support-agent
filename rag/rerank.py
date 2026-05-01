@@ -11,18 +11,25 @@ Typical pattern:
     top = rerank(query, candidates, k=3)        # Stage 2: sharp sort
 """
 
-from sentence_transformers import CrossEncoder
+# NOTE: sentence-transformers (and its torch dep, ~800 MB) is NOT in the
+# default install — this skeleton was deferred (see HANDOFF.md). To finish
+# the reranker, add `sentence-transformers>=5.4.0` back to pyproject.toml's
+# deps and the import below will work.
 
 MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-# Load once, reuse. Loading is slow (~seconds); scoring is fast.
-_model: CrossEncoder | None = None
+# Loaded lazily so that just importing this module doesn't require torch.
+_model = None
 
 
-def _get_model() -> CrossEncoder:
+def _get_model():
     """Lazy-load the cross-encoder once per process."""
     global _model
     if _model is None:
+        # Imported here, not at module top, so the absence of
+        # sentence-transformers only matters when the reranker is actually used.
+        from sentence_transformers import CrossEncoder
+
         print(f"Loading reranker model: {MODEL_NAME} ...")
         _model = CrossEncoder(MODEL_NAME)
     return _model
