@@ -31,11 +31,13 @@ Dockerfile
 docker-compose.yml
 docker-compose.*.yml
 
-# --- persistent state — bind-mounted, not baked into the image -------
-# data/docs IS shipped (the RAG corpus), but data/chroma_db is the
-# index — large, mutable, and bind-mounted from the host so ingestion
-# done outside the container is visible inside.
-data/chroma_db/
+# --- persistent state -------------------------------------------------
+# data/docs IS shipped (the RAG corpus). data/chroma_db (the embedded
+# index, ~50 MB) is NOW shipped too because HF Spaces has no bind
+# mounts. Locally, the bind mount in docker-compose.yml still wins
+# and overlays the in-image copy with the host's, so dev iteration
+# isn't slowed by a stale baked-in index.
+# data/chroma_db/   # ← left here as a comment, intentionally NOT excluded
 
 # --- dev-only artifacts ----------------------------------------------
 notebooks/
