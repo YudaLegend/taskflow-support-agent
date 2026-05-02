@@ -33,11 +33,11 @@ docker-compose.*.yml
 
 # --- persistent state -------------------------------------------------
 # data/docs IS shipped (the RAG corpus). data/chroma_db (the embedded
-# index, ~50 MB) is NOW shipped too because HF Spaces has no bind
-# mounts. Locally, the bind mount in docker-compose.yml still wins
-# and overlays the in-image copy with the host's, so dev iteration
-# isn't slowed by a stale baked-in index.
-# data/chroma_db/   # ← left here as a comment, intentionally NOT excluded
+# index) is NOT shipped — instead, the lifespan handler in app/main.py
+# lazy-ingests on first start when the collection is missing. That makes
+# the image smaller AND removes the dependency on the developer's local
+# Chroma state being correctly populated.
+data/chroma_db/
 
 # --- dev-only artifacts ----------------------------------------------
 notebooks/

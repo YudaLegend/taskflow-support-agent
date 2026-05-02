@@ -66,21 +66,48 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 
+def _ensure_rag_index() -> None:
+    """Lazy-ingest the RAG corpus on a clean disk.
+
+    Why this exists: HF Spaces (and any container with no bind-mounted
+    persistent volume) starts with an empty Chroma directory. If we don't
+    seed it, search_docs_tool fires `NotFoundError: Collection [taskflow_docs]
+    does not exist` on the first chat that triggers retrieval.
+
+    The check is a no-op when the collection already exists (local dev with
+    bind-mounted data/chroma_db, or a warm restart on the same disk).
+    """
+    import os
+
+    import chromadb
+
+    chroma_path = os.getenv("CHROMA_PATH", "data/chroma_db")
+    client = chromadb.PersistentClient(path=chroma_path)
+    if any(c.name == "taskflow_docs" for c in client.list_collections()):
+        print("RAG index present, skipping ingest")
+        return
+    print("RAG index missing, ingesting from data/docs ...")
+    # Imported lazily so a warm restart doesn't pay the import cost.
+    from rag.ingest import main as ingest_main
+
+    ingest_main()
+    print("RAG ingest complete")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # TODO A — startup: call get_graph() once to compile the graph eagerly
-    # so the first /chat request doesn't pay the compile cost.
-    # Hint: it's just `get_graph()` — the @lru_cache makes it a singleton.
+    # Compile the graph once so the first /chat doesn't pay the cost.
     get_graph()
 
-    # TODO B — print a one-line "ready" log so you know uvicorn is up.
+    # Ingest the RAG corpus if the collection isn't on disk yet.
+    # Adds ~10–30s to first start on a clean container; instant on warm restarts.
+    _ensure_rag_index()
+
     print("ready")
 
     yield
 
-    # TODO C — shutdown: call flush_langfuse() so buffered traces are sent
-    # before the worker exits. If you skip this, restarts lose the last few
-    # in-flight traces silently — same bug as the Day 18 short-script issue.
+    # Flush buffered Langfuse traces; without this short-lived processes lose them.
     flush_langfuse()
 
 

@@ -59,6 +59,10 @@ def client(fake_graph, monkeypatch):
     only the override reaches those. Belt and suspenders.
     """
     monkeypatch.setattr("app.main.get_graph", lambda: fake_graph)
+    # Skip the lazy RAG ingest in lifespan — tests don't need a real Chroma
+    # collection (the graph is mocked anyway), and ingesting on every test
+    # run would add 10-30s of model-loading overhead.
+    monkeypatch.setattr("app.main._ensure_rag_index", lambda: None)
     app.dependency_overrides[get_graph] = lambda: fake_graph
     app.dependency_overrides[get_langfuse] = lambda: None
     app.dependency_overrides[get_langfuse_client] = lambda: None
