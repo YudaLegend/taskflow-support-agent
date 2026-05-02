@@ -4,12 +4,16 @@ import os
 import random
 from datetime import UTC, datetime, timedelta
 
+from dotenv import load_dotenv
 from faker import Faker
 from pymongo import MongoClient
+
+load_dotenv()
 
 fake = Faker()
 Faker.seed(42)
 random.seed(42)
+
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("MONGO_DB", "taskflow")

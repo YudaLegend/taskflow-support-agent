@@ -138,7 +138,7 @@ services:
       # These OVERRIDE anything in .env — explicit wins.
       # Inside the compose network, langfuse-web resolves via Docker DNS.
       MONGO_URI: mongodb://host.docker.internal:27017
-      LANGFUSE_HOST: http://langfuse-web:3000
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
     extra_hosts:
       # Makes host.docker.internal work on Linux too (no-op on Win/Mac).
       - "host.docker.internal:host-gateway"

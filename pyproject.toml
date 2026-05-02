@@ -17,7 +17,6 @@ dependencies = [
     "pydantic>=2.12.5",
     "pymongo>=4.16.0",
     "python-dotenv>=1.2.2",
-    "sentence-transformers>=5.4.0",
     "uvicorn>=0.44.0",
 ]
 

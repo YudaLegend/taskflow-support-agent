@@ -31,10 +31,12 @@ Dockerfile
 docker-compose.yml
 docker-compose.*.yml
 
-# --- persistent state — bind-mounted, not baked into the image -------
-# data/docs IS shipped (the RAG corpus), but data/chroma_db is the
-# index — large, mutable, and bind-mounted from the host so ingestion
-# done outside the container is visible inside.
+# --- persistent state -------------------------------------------------
+# data/docs IS shipped (the RAG corpus). data/chroma_db (the embedded
+# index) is NOT shipped — instead, the lifespan handler in app/main.py
+# lazy-ingests on first start when the collection is missing. That makes
+# the image smaller AND removes the dependency on the developer's local
+# Chroma state being correctly populated.
 data/chroma_db/
 
 # --- dev-only artifacts ----------------------------------------------
