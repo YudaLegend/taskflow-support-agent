@@ -523,33 +523,31 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - **Agent eval not wired to CI yet.** `eval/run_agent_eval.py` costs Groq tokens and is flaky on LLM-judgment edges — belongs in a scheduled workflow, not per-PR. Day 24 candidate D.
 - **No README + no CI badge.** Recruiters scan repo READMEs first; ours is still the placeholder. Day 24 candidate A.
 
-### Next session — Day 24 candidates (pick one with user)
+### Next session — Day 25 candidates (pick one with user)
 
-**A. README + interview-prep polish (highest portfolio-value-per-hour):**
-- Write a real README.md with architecture diagram (Mermaid), quickstart (`docker compose up --build`), screenshots of UI + Langfuse traces, link to PR #1
-- Add a CI status badge to README (`![CI](...)`) — recruiters scan for these
-- Record a 60s demo GIF/video of the chat → trace → score loop
-- Finish drafting answers to Sections 3–15 of `learning/concepts/project_interview.md`
-- **Strongest recommendation.** This is what a recruiter actually opens before deciding to interview you. The product is shippable; now it needs to look shippable.
+**A. Demo video (highest portfolio-value-per-hour, smallest scope):**
+- 60-90s screen recording: load the live HF Space, ask a product question (RAG), ask an account question (Mongo), click 👎, switch to Langfuse and show the trace + score, switch to GitHub and show the CI badge / commit history
+- Tools: OBS Studio (free) or Windows Game Bar (Win+G, built-in). Trim with Clipchamp/iMovie.
+- Upload unlisted to YouTube, embed in README via thumbnail+link. The TODO comment is already in place near the demo section of README.
 
 **B. Persistent checkpointer (PostgresSaver):**
 - Swap `MemorySaver()` → `PostgresSaver(conn_string=...)` in `agent/graph.py`
-- Reuse the Langfuse Postgres or add a separate `taskflow-postgres` service in compose (cleaner — separation of concerns)
-- Conversations now survive `docker compose down/up`; multi-replica deploy becomes possible
-- Concepts: connection pooling, schema migration on first start, idempotent setup. Tests in CI become more interesting (real DB or testcontainers).
+- For the cloud deploy, point at a free Neon or Supabase Postgres (or reuse the Langfuse Atlas-equivalent). For local compose, add a `taskflow-postgres` service.
+- Conversations now survive `docker compose down/up` AND HF Space restarts; multi-replica deploy becomes possible.
+- Concepts: connection pooling, schema migration on first start, idempotent setup. Tests in CI get more interesting (real DB or testcontainers).
 
-**C. Image-size + production hardening:**
-- Switch torch to CPU-only wheel via `[tool.uv.sources]` extra-index in pyproject — saves ~600 MB
+**C. Image-size pass + production hardening:**
 - Add `USER appuser` for non-root runtime
 - Pin base image to a SHA digest for reproducibility
 - Add a `HEALTHCHECK` instruction to the Dockerfile (compose already references `/health`)
 - Add `trivy` or `docker scout` scan as a fourth CI job
-- Concepts: SBOM, image scanning, reproducibility. Visible win in `docker images` size column.
+- Try Chroma's bundled onnx model directly — possibly another ~100 MB off
+- Concepts: SBOM, image scanning, reproducibility, supply-chain security.
 
-**D. Agent eval as a scheduled CI workflow:**
+**D. Scheduled agent eval workflow:**
 - New `.github/workflows/agent-eval.yml` triggered weekly + manual `workflow_dispatch`
-- Runs the existing `eval/run_agent_eval.py` against real Groq + a Langfuse instance (via secrets)
-- Posts results as a GitHub release note or commit comment
-- Concepts: secrets management in GHA, scheduled workflows, the "test on every PR vs eval on a schedule" split.
+- Runs `eval/run_agent_eval.py` against real Groq + Langfuse Cloud (via secrets)
+- Posts results as a commit comment or release note
+- Concepts: secrets management in GHA (envs, OIDC), scheduled workflows, "test on every PR vs eval on a schedule" split.
 
 **Collaboration reminder:** User is learning for interviews. Explain concepts before code. For pipeline/algo code give a skeleton + TODOs; for scaffolding/boilerplate just write it. Be brief. Use tables. The TaskFlow project is now in the Interview-Ready Shape phase — focus on polishing what exists rather than adding new agent capabilities.
