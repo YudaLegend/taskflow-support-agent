@@ -83,7 +83,8 @@ taskflow-support-agent/
 | 21 | (deferred — tests + CI moved to Day 23) | ⏭️ |
 | 22 | Docker — multi-stage Dockerfile, env-var refactor, app service in compose | ✅ |
 | 23 | CI/CD — ruff + pytest + GitHub Actions (lint + test + docker build) | ✅ |
-| 24+ | Persistent checkpointer, README polish, image-size optimization | ⏳ |
+| 24 | Cloud deploy — HF Spaces + Atlas + Langfuse Cloud, image slim, real README | ✅ |
+| 25+ | Demo video, persistent checkpointer, image-size pass, scheduled agent eval | ⏳ |
 
 ### Day 11 progress so far
 
@@ -168,7 +169,7 @@ Stored in memory, but highlight:
 
 ## User's current state
 
-End of Day 23. Phase 4 is feature-complete and CI-protected. On every push and PR, GitHub Actions runs ruff (lint + format), pytest (33 tests across guardrails / helpers / API endpoints), and a Docker buildx that pushes to GHCR on merge to main. The whole stack still comes up with `docker compose up --build`; the demo loop (chat UI → streaming → Langfuse trace + score) works end-to-end. PR #1 (Day 23 CI) merged into main.
+End of Day 24. **The agent is live in production** at https://huggingface.co/spaces/jinyuuda/taskflow-support-agent. Three external services replace the local stack: MongoDB Atlas (free M0 tier) for user/ticket data, Langfuse Cloud for observability, Groq Cloud for LLM. Image slimmed from ~3 GB → ~1.2 GB by dropping `sentence-transformers` (and torch transitively) — the reranker that needed it was deferred. README is now a recruiter-ready project doc with Mermaid architecture, tech-stack rationale, design-decision callouts, and a link to the live demo. PRs #1 (CI) and #2 (deploy) merged into main.
 
 ### Days 13–15 summary
 
@@ -436,6 +437,69 @@ covering tools (Q35–42), agent loop (Q43–51), and memory (Q52–60). Total: 
 - `pyproject.toml` — added `[tool.ruff]`, `[tool.ruff.lint]`, `[tool.ruff.lint.flake8-bugbear]`, `[tool.ruff.lint.per-file-ignores]`, `[tool.pytest.ini_options]`. New dev deps: `ruff`, `httpx`, `pytest-asyncio`
 - `uv.lock` — locked the new dev deps
 - 17 source files touched by `ruff format` + `ruff check --fix`: import sorting, `datetime.UTC` modernization, `strict=False` on `zip()`, per-line `# noqa: E402` for intentional late imports
+
+### Day 24 summary
+
+**External services chosen (all free tiers):**
+
+| Service | Plan | Why |
+|---|---|---|
+| **MongoDB Atlas** M0 | Free forever, 512 MB, AWS Paris | Replaces local Mongo Service. Seed data fits easily (50 users + 200 tickets + 500 events + 20 subs). |
+| **Langfuse Cloud** Hobby | Free, EU region | Replaces self-hosted langfuse-web. Cloud + self-hosted Langfuse can coexist (different DBs); we picked Cloud for the deployed agent so traces survive past local docker-compose lifetimes. |
+| **Hugging Face Spaces** Docker SDK, CPU basic | Free, 16 GB RAM, 50 GB disk, never sleeps | Most generous free tier for ML images. Builds from `Dockerfile`, deploys via `git push`. Other free tiers (Render 512 MB, Fly.io 256 MB, Railway $5/mo credit) wouldn't fit a 1+ GB image. |
+
+**Step-by-step (the realistic friction):**
+
+| Step | Hit | Fix |
+|---|---|---|
+| Atlas cluster | Smooth — M0, AWS Paris, automate security setup | — |
+| Atlas Network Access | Initially had only home IP whitelisted | Added `0.0.0.0/0` (HF Spaces has no static egress IP — can't whitelist). Documented as a "swap to VPC peering before real prod" debt. |
+| Atlas seed | `seed_mongo.py` didn't load `.env`, ran against localhost by default | User added `load_dotenv()` to the script (cleaner than always passing `--env-file`) |
+| Langfuse Cloud signup | Easy — GitHub auth, create org + project, generate keys | — |
+| First local test against Cloud Langfuse | `python-dotenv could not parse statement starting at line 4` + `Failed to export span batch` | Two issues on `.env` line 4: var renamed to `LANGFUSE_BASE_URL` (intentional, code aligned) BUT had a stray `·` (U+00B7) at end of line. Also re-aligned `docker-compose.yml`'s env block which still set `LANGFUSE_HOST`. |
+| Image slim | Drop `sentence-transformers` to remove torch (~800 MB) | Made `from sentence_transformers import CrossEncoder` lazy in `rag/rerank.py` (skeleton). 3 GB → 1.2 GB. |
+| First HF push | `error: remote hf already exists`, then `Repository not found` | Wrong username assumed (`YudaLegend` GitHub vs `jinyuuda` HF). Used `git remote set-url hf` to fix. |
+| Second HF push | `! [rejected] (fetch first)` | Force push (`--force`). Safe because the only thing on HF was the auto-generated placeholder README. |
+| Third HF push | `Sorry, your push was rejected during YAML metadata verification: "short_description" length must be less than or equal to 60 characters` | Shortened the YAML frontmatter `short_description`. |
+| First chat after deploy | `chromadb.errors.NotFoundError: Collection [taskflow_docs] does not exist` | Local `data/chroma_db` only had sweep variants (`taskflow_docs_500_50` etc.), not the default-named collection. Solution: lazy-ingest in lifespan handler. Idempotent — runs once on a clean container, no-op on warm restarts. Adds ~30s to first request after deploy. |
+| Account-question chat | `pymongo.errors.ServerSelectionTimeoutError: SSL handshake failed: TLSV1_ALERT_INTERNAL_ERROR` against Atlas | Atlas closes TLS handshake without explanation when source IP isn't whitelisted. Added `0.0.0.0/0` to Network Access (was previously only home IP). |
+| All five canonical scenarios | ✅ greeting, RAG product question, multi-tool account question, conversation memory follow-up, guardrail refusal — all working in production | — |
+
+**Stack pain points worth remembering:**
+- **HF Spaces git remote URL** uses your HF username, not your GitHub username. Different identity systems entirely. Check the URL on your HF profile page if a push fails with "Repository not found."
+- **Atlas Network Access blocks at TLS layer**, not at auth. Symptoms look like an SSL bug (`TLSV1_ALERT_INTERNAL_ERROR`) — actually firewall. Fix: ensure `0.0.0.0/0` is on the allowlist for any cloud deploy without static egress IPs.
+- **HF Spaces YAML frontmatter rules**: `short_description` ≤ 60 chars; `app_port` must match what your container actually listens on; `sdk: docker` requires a Dockerfile in repo root.
+- **`docker compose restart` and `docker compose stop/start` do NOT re-read `.env`** — they restart the existing container with cached env. Use `docker compose up -d --force-recreate <svc>` to re-load. Same trap exists across most container orchestrators; well-known but easy to forget.
+- **HF Secrets vs `.env` parsing**: HF's UI form takes the literal string value; quotes you'd write in `.env` (which dotenv strips) become part of the value in HF (which has no parser stripping). Easy 401 if you copy with quotes.
+- **Lazy first-start ingest is cleaner than baking the index in.** Image stays smaller, no dependency on the developer's local Chroma state being correct, idempotent across redeploys. Cost: ~30s on cold start (download embedder + chunk + embed 21 docs).
+- **`from __future__ import annotations`** + lazy `import sentence_transformers` inside a function = the file imports cleanly without the dep installed. Useful pattern for "feature is scaffolded but not yet enabled."
+- **TestClient triggers `lifespan`**, so any side effects there (lazy ingest, get_graph) need to be mocked in conftest or the test suite slows down dramatically. Used `monkeypatch.setattr("app.main._ensure_rag_index", lambda: None)`.
+
+**Key Day 24 learnings (interview-gold):**
+> **A free-tier deploy isn't free of design choices.** "Pick a platform" is the headline; the real work is figuring out which dependencies leave the host (Mongo? Yes, to Atlas. Langfuse? Yes, to Cloud. ChromaDB? No, embedded with lazy-ingest), what slimming you need to fit (drop torch via dropping sentence-transformers — the reranker was unfilled scaffold anyway), and how to swap the env-var topology between dev (compose service-name DNS) and prod (real public hostnames). Each decision is a real interview talking point.
+>
+> **Multi-environment env-var management is its own discipline.** The same agent code runs three ways: locally without docker (reads `.env`), locally with compose (compose's `environment:` block overrides `.env`), and on HF Spaces (Secrets in the UI override anything else). The pattern: code reads `os.getenv("X", <local-default>)`, dev defaults work for laptop runs, compose overrides for in-network DNS, prod platform Secrets win in deploy. The same env-var name flows through three layers.
+>
+> **TLS errors are often firewall errors in disguise.** `TLSV1_ALERT_INTERNAL_ERROR` from Atlas = "your IP isn't on my allowlist," not "your TLS is broken." Cloud databases prefer to fail the handshake silently rather than tell you why. Lesson: when a TLS error keeps coming back even after retries and the cert is fine, suspect the firewall first.
+>
+> **Lazy ingest beats baked-in state for portability.** Shipping the Chroma index in the image looked simpler at first, but it depended on the developer's local state being correct. Switching to "if collection missing on startup, ingest from data/docs" made the deploy reproducible from any clean clone — same image, any disk, works.
+
+### Files added/modified on Day 24
+**Added:**
+- `.env.example` — template with comments per env var, where to get keys, graceful-degradation notes
+
+**Modified:**
+- `pyproject.toml`, `uv.lock` — dropped `sentence-transformers` from runtime deps
+- `Dockerfile` — unchanged (still multi-stage), but final image now ~1.2 GB instead of ~3 GB due to the dep removal
+- `.dockerignore` — restored `data/chroma_db/` exclusion (lazy ingest replaces it)
+- `docker-compose.yml` — `LANGFUSE_HOST` → `LANGFUSE_BASE_URL` to match the renamed code var
+- `.env` — added `MONGO_URI` (Atlas SRV string), updated `LANGFUSE_*` to Cloud values, renamed `LANGFUSE_HOST` → `LANGFUSE_BASE_URL`
+- `agent/graph.py` — `os.getenv("LANGFUSE_HOST", ...)` → `os.getenv("LANGFUSE_BASE_URL", ...)`
+- `app/main.py` — added `_ensure_rag_index()` and called from lifespan (lazy first-start ingest)
+- `data/seed_mongo.py` — added `load_dotenv()` so it picks up Atlas URI without `--env-file`
+- `rag/rerank.py` — `from sentence_transformers import CrossEncoder` made lazy (inside `_get_model`) so the module imports cleanly without the dep
+- `tests/conftest.py` — `monkeypatch.setattr("app.main._ensure_rag_index", lambda: None)` so tests don't trigger ingest
+- `README.md` — full rewrite (badges, mermaid arch diagram, tech stack table, three quickstart paths, project tree, eval design, observability loop, 7 design-decision callouts, roadmap, links)
 
 ### Open issues / still pending
 - `agent/llm.py` still uses `llama-3.3-70b-versatile` — fine for RAG answerer, but graph.py uses Llama 4 Scout
