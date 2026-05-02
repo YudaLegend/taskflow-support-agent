@@ -6,7 +6,7 @@ colorTo: indigo
 sdk: docker
 app_port: 8000
 pinned: false
-short_description: AI customer support agent for a fictional SaaS — RAG + tool-calling + observability.
+short_description: AI support agent — RAG + tools + Langfuse traces
 ---
 
 # TaskFlow Support Agent
