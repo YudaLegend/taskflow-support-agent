@@ -228,7 +228,6 @@ In dev, traces go to a self-hosted Langfuse via docker-compose. In prod (the liv
 ## Further reading
 
 - **[HANDOFF.md](HANDOFF.md)** — every decision day-by-day, with the failures included
-- **[learning/concepts/project_interview.md](learning/concepts/project_interview.md)** — 124 interview questions across 15 sections (RAG fundamentals, retrieval improvements, tools, agent loop, memory, guardrails, eval, observability, FastAPI, Docker, CI/CD)
 - **[eval/RETRIEVAL_EXPERIMENTS.md](eval/RETRIEVAL_EXPERIMENTS.md)** — chunk-size sweep + hybrid retrieval results, Day 11
 
 ## License
