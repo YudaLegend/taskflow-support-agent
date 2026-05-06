@@ -28,3 +28,8 @@ chroma_db/
 # IDE
 .vscode/
 .idea/
+
+
+# Learning
+
+learning/
