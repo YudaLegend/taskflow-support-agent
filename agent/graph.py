@@ -18,6 +18,7 @@ from langchain_groq import ChatGroq
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
+from langchain_openai import ChatOpenAI
 
 from agent.guardrails import (
     MAX_TOOL_CALLS,
@@ -141,12 +142,18 @@ You do NOT help with: writing code, creative writing, competitor comparisons, me
 # Why bind_tools? It converts your Pydantic schemas into the JSON format
 # the Groq API expects, and attaches them to every request automatically.
 
-llm = ChatGroq(
-    model="meta-llama/llama-4-scout-17b-16e-instruct",
-    temperature=0,
-    api_key=os.getenv("GROQ_API_KEY"),
-)
+# llm = ChatGroq(
+#     model="meta-llama/llama-4-scout-17b-16e-instruct",
+#     temperature=0,
+#     api_key=os.getenv("GROQ_API_KEY"),
+# )
 
+llm = ChatOpenAI(
+    model="deepseek/deepseek-v4-flash:free", # Specifically targeting the free endpoint
+    temperature=0,
+    api_key=os.getenv("OPENROUTER_API_KEY"), 
+    base_url="https://openrouter.ai/api/v1", # Pointing to OpenRouter instead of DeepSeek  
+)
 llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
 
 
