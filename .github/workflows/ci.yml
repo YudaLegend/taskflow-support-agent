@@ -51,7 +51,7 @@ jobs:
 
   # -------------------------------------------------------------------------
   # Test — pytest against the FastAPI app with mocked dependencies.
-  # No Groq calls, no Langfuse, no Mongo, no Docker required.
+  # No LLM calls, no Langfuse, no Mongo, no Docker required.
   # -------------------------------------------------------------------------
   test:
     name: Test (pytest)
@@ -68,10 +68,11 @@ jobs:
         run: uv sync --dev --frozen
 
       - name: Run pytest
-        # GROQ_API_KEY needs SOMETHING set to import agent.graph (it constructs
-        # a ChatGroq client at module load time). The test fixtures never
-        # actually call the LLM, so a fake value is enough.
+        # Both keys need SOMETHING set so that importing agent.graph succeeds —
+        # the module builds the LLM client at load time. The test fixtures never
+        # actually call the LLM, so fake values are enough.
         env:
+          OPENROUTER_API_KEY: test-key-not-used
           GROQ_API_KEY: test-key-not-used
         run: uv run pytest
 

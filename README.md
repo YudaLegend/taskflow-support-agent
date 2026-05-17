@@ -43,7 +43,7 @@ Most LLM-app tutorials stop at "import LLM, prompt it, return the response." Thi
 | **Agent eval, not just RAG eval** | 15 scripted scenarios with deterministic trajectory + endpoint assertions (`tools_called_ordered`, `response_contains`, ...) — no LLM-as-judge for trajectories, because they're fully observable |
 | **Real observability** | Self-hosted Langfuse v3 in dev (compose), Langfuse Cloud in prod. `request_id == trace_id` so user 👍/👎 lands as a score on the exact trace via `create_score`, closing the prod-eval feedback loop |
 | **Streaming UX, not just JSON** | SSE token streaming via async generator + `StreamingResponse`. Edge case handled: when the guardrail refuses, no LLM tokens fire — falls back to `graph.aget_state(...)` so the UI bubble isn't empty |
-| **Production-shaped infra** | Multi-stage Dockerfile, full compose stack, env-var driven (12-factor), GitHub Actions CI gating every PR, deployed to a free tier with 3 external services (Atlas, Langfuse Cloud, Groq) |
+| **Production-shaped infra** | Multi-stage Dockerfile, full compose stack, env-var driven (12-factor), GitHub Actions CI gating every PR, deployed to a free tier with 3 external services (Atlas, Langfuse Cloud, OpenRouter) |
 
 **[HANDOFF.md](HANDOFF.md)** is the day-by-day decision log — what was built, what was tried and didn't work, and why. Read it if you want the full story behind each choice.
 
@@ -58,7 +58,7 @@ graph LR
     Tools -->|search_docs| Chroma[(ChromaDB<br/>embedded)]
     Tools -->|get_user, list_tickets,<br/>create_ticket| Mongo[(MongoDB Atlas)]
 
-    Graph -->|LLM API| Groq[Groq Cloud<br/>Llama 4 Scout 17B]
+    Graph -->|LLM API| LLM[OpenRouter<br/>DeepSeek V4 Flash · free tier]
 
     Graph -.->|callback spans| Langfuse[Langfuse Cloud<br/>traces + scores]
     User -.->|👍/👎 click| FastAPI
@@ -78,8 +78,8 @@ START → guard_input ──refused──> END (canonical refusal, no LLM call)
 
 | Layer | Choice | Why |
 |---|---|---|
-| **LLM** | Groq · `meta-llama/llama-4-scout-17b-16e-instruct` | Free tier, fast tokens, native tool calling. Llama 3.3 on Groq has a tool-format bug — Llama 4 Scout doesn't. |
-| **Agent framework** | LangGraph (langchain v1) + ChatGroq | ReAct loop, MemorySaver checkpointer, callback hooks for Langfuse |
+| **LLM** | OpenRouter · `deepseek/deepseek-v4-flash:free` (Groq `llama-4-scout-17b` kept as fallback in [`agent/graph.py`](agent/graph.py)) | Free tier, MoE model with strong tool-calling, accessed through OpenRouter's OpenAI-compatible API so the same `ChatOpenAI` client can target other providers without code changes. |
+| **Agent framework** | LangGraph (langchain v1) + `ChatOpenAI` (against OpenRouter) | ReAct loop, MemorySaver checkpointer, callback hooks for Langfuse |
 | **Embedding + RAG** | ChromaDB embedded · `all-MiniLM-L6-v2` via onnxruntime | Single process, no extra container at this scale. Default Chroma embedder = same model, no `sentence-transformers` (saves ~800 MB) |
 | **API** | FastAPI + uvicorn | Async-native, SSE streaming, auto-generated OpenAPI docs at `/docs`, dependency injection seam for testing |
 | **UI** | Single-file vanilla HTML + JS | EventSource doesn't support POST; we parse SSE manually with `fetch` + `ReadableStream`. ~180 LOC, no build step. |
@@ -103,7 +103,8 @@ Open https://huggingface.co/spaces/jinyuuda/taskflow-support-agent — talk to t
 git clone https://github.com/YudaLegend/taskflow-support-agent
 cd taskflow-support-agent
 cp .env.example .env
-# Edit .env: paste your GROQ_API_KEY (free at https://console.groq.com/keys)
+# Edit .env: paste your OPENROUTER_API_KEY (free at https://openrouter.ai/keys)
+# (Or set GROQ_API_KEY instead and uncomment the ChatGroq block in agent/graph.py)
 # Optional: paste LANGFUSE_PUBLIC_KEY/SECRET_KEY for tracing
 
 docker compose up --build
@@ -132,10 +133,10 @@ uv run uvicorn app.main:app --reload --port 8000
 ### 4. Run the test suite
 
 ```bash
-uv run pytest                       # 33 unit + API tests, no Groq/Langfuse needed
+uv run pytest                       # 33 unit + API tests, no LLM/Langfuse needed
 uv run ruff check .                 # lint
-uv run python -m eval.run_eval      # RAG eval (uses Groq tokens)
-uv run python -m eval.run_agent_eval  # 15 agent scenarios (uses Groq tokens)
+uv run python -m eval.run_eval      # RAG eval (consumes free-tier OpenRouter quota)
+uv run python -m eval.run_agent_eval  # 15 agent scenarios (consumes free-tier OpenRouter quota)
 ```
 
 ## Project structure
@@ -143,7 +144,7 @@ uv run python -m eval.run_agent_eval  # 15 agent scenarios (uses Groq tokens)
 ```
 taskflow-support-agent/
 ├── agent/
-│   ├── llm.py             # Groq wrapper — chat(messages) -> str
+│   ├── llm.py             # LLM wrapper — chat(messages) -> str (Groq, kept for the standalone baseline)
 │   ├── tools.py           # 5 tool functions + Pydantic schemas + LangChain wrappers
 │   ├── guardrails.py      # is_out_of_scope, redact_pii, MAX_TOOL_CALLS
 │   └── graph.py           # ReAct agent: guard_input → agent → tools loop, MemorySaver, Langfuse
@@ -211,7 +212,7 @@ In dev, traces go to a self-hosted Langfuse via docker-compose. In prod (the liv
 2. **`guard_input` runs BEFORE the LLM, not in the system prompt.** A system-prompt rule can be talked around (prompt injection); a code-level regex can't. Defense in depth.
 3. **Embedded Chroma, not Chroma server.** At single-replica scale, embedded is one process and one bind mount. Chroma server adds a network hop with no scaling win at this size. Documented as a "swap when sharding" debt.
 4. **MemorySaver in-RAM (with tracked debt).** Conversations don't survive restart. Fine for portfolio; production would swap to `PostgresSaver`. The HANDOFF tracks the "swap before deploy" item.
-5. **Agent eval excluded from CI.** Real Groq calls cost tokens and LLM-judgment is flaky. Belongs in a scheduled workflow, not per-PR. Pure-function + API tests run on every push (33 tests, ~50s).
+5. **Agent eval excluded from CI.** Real LLM calls eat free-tier quota and LLM-judgment is flaky. Belongs in a scheduled workflow, not per-PR. Pure-function + API tests run on every push (33 tests, ~50s).
 6. **Multi-stage Docker + uv.** Builder stage installs deps with uv (10× faster than pip). Runtime stage is `python:3.11-slim` + the venv only. ~1.2 GB final, ~30 min cold CI build, ~5 min warm.
 7. **Streaming with manual SSE parser.** EventSource only supports GET; our `/chat/stream` is POST. Client uses `fetch + ReadableStream` and parses `data: ...\n\n` frames manually. Same pattern OpenAI's JS SDK uses.
 
