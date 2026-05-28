@@ -59,7 +59,7 @@ graph LR
     Tools -->|search_docs| Chroma[(ChromaDB<br/>embedded)]
     Tools -->|get_user, list_tickets,<br/>create_ticket| Mongo[(MongoDB Atlas)]
 
-    Graph -->|LLM API<br/>LLM_BACKEND={groq,deepseek}| LLM[Groq · Llama-4 Scout 17B<br/>or api.deepseek.com · DeepSeek-V3]
+    Graph -->|LLM API<br/>LLM_BACKEND=groq or deepseek| LLM[Groq · Llama-4 Scout 17B<br/>or api.deepseek.com · DeepSeek-V3]
 
     Graph -.->|callback spans| Langfuse[Langfuse Cloud<br/>traces + scores]
     User -.->|👍/👎 click| FastAPI
