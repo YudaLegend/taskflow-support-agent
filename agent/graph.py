@@ -14,6 +14,7 @@ import os
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -121,39 +122,57 @@ You do NOT help with: writing code, creative writing, competitor comparisons, me
 - Be concise, friendly, and professional."""
 
 # ---------------------------------------------------------------------------
-# LLM setup — ChatGroq with tools bound
+# LLM setup — switchable backend via LLM_BACKEND env var
+#
+# Three backends are wired up so the same agent can be A/B compared on the
+# eval suite without code changes — only env vars change. See
+# eval/compare_backends.py for the driver.
+#
+#   LLM_BACKEND=deepseek    (default) → DeepSeek-V3 via official api.deepseek.com
+#   LLM_BACKEND=openrouter            → DeepSeek-V4 Flash free tier via OpenRouter
+#   LLM_BACKEND=groq                  → Llama-4 Scout via Groq
+#
+# DeepSeek's API is OpenAI-compatible, so OpenRouter and DeepSeek both reuse
+# LangChain's ChatOpenAI wrapper (only model + key + base_url differ). Groq
+# has its own ChatGroq wrapper.
 # ---------------------------------------------------------------------------
 
-# TODO 1: Create a ChatGroq instance.
-#
-#   llm = ChatGroq(
-#       model="llama-3.3-70b-versatile",
-#       temperature=0,
-#       api_key=os.getenv("GROQ_API_KEY"),
-#   )
-#
-# Then bind your tools to it so every call includes the tool definitions:
-#
-#   llm_with_tools = llm.bind_tools(...)
-#
-# bind_tools() takes a list of tools — use LANGCHAIN_TOOLS (imported above).
-#
-# Why bind_tools? It converts your Pydantic schemas into the JSON format
-# the Groq API expects, and attaches them to every request automatically.
 
-# llm = ChatGroq(
-#     model="meta-llama/llama-4-scout-17b-16e-instruct",
-#     temperature=0,
-#     api_key=os.getenv("GROQ_API_KEY"),
-# )
+def _make_llm():
+    backend = os.getenv("LLM_BACKEND", "deepseek").lower()
 
-llm = ChatOpenAI(
-    model="deepseek/deepseek-v4-flash:free",  # free endpoint via OpenRouter
-    temperature=0,
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1",
-)
+    if backend == "deepseek":
+        return ChatOpenAI(
+            model="deepseek-chat",  # DeepSeek-V3; supports tool calling
+            temperature=0,
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            base_url="https://api.deepseek.com",
+        )
+
+    if backend == "openrouter":
+        return ChatOpenAI(
+            model="deepseek/deepseek-v4-flash:free",
+            temperature=0,
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
+        )
+
+    if backend == "groq":
+        return ChatGroq(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            temperature=0,
+            api_key=os.getenv("GROQ_API_KEY"),
+        )
+
+    raise ValueError(
+        f"Unknown LLM_BACKEND={backend!r}. Expected one of: deepseek, openrouter, groq."
+    )
+
+
+llm = _make_llm()
 llm_with_tools = llm.bind_tools(LANGCHAIN_TOOLS, parallel_tool_calls=False)
+
+
 
 
 # ---------------------------------------------------------------------------

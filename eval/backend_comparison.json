@@ -1,0 +1,1090 @@
+{
+  "deepseek": [
+    {
+      "id": "product_pricing_pro",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "Here's the pricing info for the **TaskFlow Pro plan**:\n\n- **Price:** **$12 / user / month** (with annual billing)\n- **Best for:** Small teams\n\nA few notes:\n- If you choose **monthly billing** instead of annual, the price is higher (the $12 rate reflects the 20% annual discount).\n- **Nonprofits** get 30% off, and **accredited students/educators** can get a free Pro account.\n- Payment methods include all major credit cards and PayPal.\n\nWould you like more details on what's included in the Pro plan, or help with anything else?",
+      "latency_s": 4.193013399999472,
+      "input_tokens": 2932,
+      "output_tokens": 203,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_contains",
+          "passed": true,
+          "detail": "missing substrings: []"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "product_integrations",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool",
+        "search_docs_tool",
+        "search_docs_tool"
+      ],
+      "final_response": "Here's a summary of the integrations TaskFlow currently supports:\n\n### 🔗 Pre-built Integrations\n\n| Integration | What it does | Available on |\n|---|---|---|\n| **Slack** | Receive task notifications in channels, use `/taskflow` slash command to create tasks, see rich task previews, and acknowledge @mentions from Slack. | Pro, Business, Enterprise |\n| **Google Drive** | Attach Docs, Sheets, Slides, and other Drive files to tasks with inline previews. Changes in Drive sync automatically. | Pro, Business, Enterprise |\n| **GitHub** | (Listed as an integration — details available in the docs) | Pro, Business, Enterprise |\n\n### 🔧 Other Options\n- **Webhooks** — For anything not covered by pre-built integrations, you can send webhooks to any URL whenever task events happen.\n- **API** — Full REST API available for custom integrations.\n- **Data Import** — Import from CSV, JSON, Trello, and Asana via **Settings → Data → Import**.\n\n> **Note:** Integrations are system-level and don't consume user seats. The Slack integration also supports multiple workspaces on Business and Enterprise plans (Pro is limited to one).\n\nWould you like more details on setting up any of these integrations?",
+      "latency_s": 7.71088740000414,
+      "input_tokens": 9160,
+      "output_tokens": 477,
+      "passed": false,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool', 'search_docs_tool', 'search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": false,
+          "detail": "limit=2, actual=3"
+        }
+      ]
+    },
+    {
+      "id": "account_tickets_correct_order",
+      "category": "happy_account",
+      "tool_calls": [
+        "get_user_tool"
+      ],
+      "final_response": "I found an account under that email, but it's registered to **Meredith Barnes** — not William Johnson. Could you double-check the email address you used to sign up? Or if you have a different email, I'd be happy to look that up instead.",
+      "latency_s": 2.3171944999994594,
+      "input_tokens": 2687,
+      "output_tokens": 113,
+      "passed": false,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": false,
+          "detail": "expected order=['get_user_tool', 'list_user_tickets_tool'], actual=['get_user_tool'], matched=1/2"
+        },
+        {
+          "name": "response_contains",
+          "passed": false,
+          "detail": "missing substrings: ['TF-']"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=3, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "multiturn_memory",
+      "category": "multi_turn",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "Sure! Let's break that down.\n\nThe Pro plan is **$12 per user per month** with annual billing. So for **one user**:\n\n- **$12 × 12 months = $144 per user per year**\n\nIf you have a team of, say, 5 users, that would be **$720 per year** total.\n\nWould you like me to look up what features are included in the Pro plan?",
+      "latency_s": 4.7281254999979865,
+      "input_tokens": 4714,
+      "output_tokens": 259,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_contains",
+          "passed": true,
+          "detail": "missing substrings: []"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=1, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "refuse_code_generation",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.004189300001598895,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "product_free_trial",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "Yes, TaskFlow does offer a free trial! Here are the details:\n\n- **14-day free trial** on all paid plans.\n- **No credit card required** to start the trial.\n- When the trial ends, your workspace **automatically moves to the Free plan** — no data is deleted.\n\nYou can also sign up for the **Free plan** right away without any payment info at all. Would you like help choosing a plan or setting up a trial?",
+      "latency_s": 3.06697290000011,
+      "input_tokens": 2919,
+      "output_tokens": 168,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['get_user_tool', 'create_ticket_tool'], actual=['search_docs_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "product_kanban_feature",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "Yes, absolutely! TaskFlow has a **Kanban view** built right in. Here's what you need to know:\n\n- **Kanban is the default view** for most projects. Tasks appear as cards in columns representing statuses like **To Do, In Progress, In Review, and Done**.\n- It's great for **tracking work in progress** and **spotting bottlenecks** at a glance.\n- You can also switch between **List, Calendar, and Timeline views** — all views show the same tasks, so changes in one view update everywhere instantly.\n\nWhen creating a new project, you can set Kanban as the default view, or switch to it anytime. Would you like help setting up your first Kanban project?",
+      "latency_s": 3.7618785000013304,
+      "input_tokens": 3071,
+      "output_tokens": 224,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "account_user_plan_lookup",
+      "category": "happy_account",
+      "tool_calls": [
+        "get_user_tool",
+        "search_docs_tool"
+      ],
+      "final_response": "I can see your account is registered under the email **williamjohnson@example.org**, associated with the name **Meredith Barnes** at **Lawrence-Pacheco**. However, the account information I have access to doesn't include your specific plan tier directly.\n\nHere's what I'd suggest:\n\n1. **Check your plan in-app**: Go to **Settings → Billing** in your TaskFlow workspace — it will show your current plan and billing details.\n2. **If you're on a trial**: It may have ended, and you could be on the **Free** plan.\n\nWould you like me to look into anything else, or would you like me to create a support ticket to get a definitive answer on your plan?",
+      "latency_s": 5.114661999999953,
+      "input_tokens": 4562,
+      "output_tokens": 287,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['get_user_tool'], actual=['get_user_tool', 'search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['list_user_tickets_tool', 'create_ticket_tool'], actual=['get_user_tool', 'search_docs_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=2"
+        }
+      ]
+    },
+    {
+      "id": "multiturn_ticket_followup",
+      "category": "multi_turn",
+      "tool_calls": [
+        "get_user_tool",
+        "list_user_tickets_tool"
+      ],
+      "final_response": "**TF-1011** — \"Feature request: time tracking\" — is still **open** and hasn't been assigned to anyone yet.\n\nWould you like me to add more details to that ticket or bump up its priority?",
+      "latency_s": 5.687146999996912,
+      "input_tokens": 6678,
+      "output_tokens": 335,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": true,
+          "detail": "expected order=['get_user_tool', 'list_user_tickets_tool'], actual=['get_user_tool', 'list_user_tickets_tool'], matched=2/2"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=2"
+        }
+      ]
+    },
+    {
+      "id": "ticket_create_with_details",
+      "category": "ticket_creation",
+      "tool_calls": [
+        "get_user_tool"
+      ],
+      "final_response": "I found an account under that email, but the name on it is **Meredith Barnes**. Could you confirm — is this your account, or do you have a different email address associated with your TaskFlow account? I want to make sure I'm opening the ticket for the right person before proceeding.",
+      "latency_s": 2.4138973000008264,
+      "input_tokens": 2718,
+      "output_tokens": 120,
+      "passed": false,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": false,
+          "detail": "expected order=['get_user_tool', 'create_ticket_tool'], actual=['get_user_tool'], matched=1/2"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=4, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "ticket_create_missing_details",
+      "category": "ticket_creation",
+      "tool_calls": [],
+      "final_response": "I'd be happy to help create a support ticket for you! First, could you please provide me with the email address associated with your TaskFlow account so I can look you up?",
+      "latency_s": 1.1360147000013967,
+      "input_tokens": 1265,
+      "output_tokens": 38,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_competitor_asana",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.0034429999941494316,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_creative_writing",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.002675499999895692,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_legal_advice",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.002746300000580959,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "edge_unknown_user",
+      "category": "edge_case",
+      "tool_calls": [
+        "get_user_tool"
+      ],
+      "final_response": "It looks like there's no account associated with **nobody@nowhere-fake.com** in our system. \n\nCould you double-check the email address you used to sign up for TaskFlow? If you're not sure which email you registered with, feel free to provide another one and I'll look it up for you!",
+      "latency_s": 2.754861000001256,
+      "input_tokens": 2632,
+      "output_tokens": 126,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['get_user_tool'], actual=['get_user_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['list_user_tickets_tool'], actual=['get_user_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    }
+  ],
+  "openrouter": [
+    {
+      "id": "product_pricing_pro",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_qg-dXNC57A8i227-\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "product_integrations",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_tpXMWSAUYs4F2-RU\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "account_tickets_correct_order",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_u0B2u-IPvBJNtqpV\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "multiturn_memory",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_OoHiljra4NzKtjl_\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "refuse_code_generation",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.002937099998234771,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "product_free_trial",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_-jM0UP58qkAegnbM\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "product_kanban_feature",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_MOocpm-oIik3b9Pm\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "account_user_plan_lookup",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_A9Ttzz492uqDPU18\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "multiturn_ticket_followup",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_sSNUh-mjni9tcJwr\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "ticket_create_with_details",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_BKjnCWtUWsEdm18t\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "ticket_create_missing_details",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_zbEXD-jzP-XPzIlb\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    },
+    {
+      "id": "refuse_competitor_asana",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.002948200002720114,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_creative_writing",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.003181100000801962,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_legal_advice",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.004158700001426041,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "edge_unknown_user",
+      "error": "Error code: 402 - {'error': {'message': 'Provider returned error', 'code': 402, 'metadata': {'raw': '{\"error\":{\"type\":\"insufficient_quota\",\"code\":\"insufficient_quota\",\"message\":\"Out of credits. Top up at /dashboard/billing to continue.\",\"request_id\":\"req_Lf6ctgZdP5x0XrOo\"}}', 'provider_name': 'Crucible', 'is_byok': False}}, 'user_id': 'user_3Dog2PMPUkYTVA8D0xDHBdOj7N5'}",
+      "passed": false
+    }
+  ],
+  "groq": [
+    {
+      "id": "product_pricing_pro",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "The price of the Pro plan is $12 per user per month when billed annually, or $15 per user per month. This information comes from the TaskFlow pricing plans document.",
+      "latency_s": 1.068937800002459,
+      "input_tokens": 3398,
+      "output_tokens": 78,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_contains",
+          "passed": true,
+          "detail": "missing substrings: []"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "product_integrations",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "TaskFlow supports various integrations, including a webhook integration that can send webhooks to any URL you choose whenever task events happen. You can find more information about TaskFlow's integrations in the API documentation. Additionally, integrations do not count against your user limits, as they are system-level and don't consume user seats. \n\nFor more information on TaskFlow's integrations, you can refer to the documentation: features-integrations.md.",
+      "latency_s": 1.275643000000855,
+      "input_tokens": 3576,
+      "output_tokens": 117,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "account_tickets_correct_order",
+      "category": "happy_account",
+      "tool_calls": [
+        "get_user_tool",
+        "list_user_tickets_tool"
+      ],
+      "final_response": "Here are your recent support tickets:\n\n* TF-1101: Kanban drag and drop broken on Firefox (resolved)\n* TF-1009: SSO login keeps looping (waiting on you)\n* TF-1011: Feature request: time tracking (open)\n\nLet me know if you'd like to add a new ticket or update one of these!",
+      "latency_s": 1.2421297000037157,
+      "input_tokens": 5502,
+      "output_tokens": 142,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": true,
+          "detail": "expected order=['get_user_tool', 'list_user_tickets_tool'], actual=['get_user_tool', 'list_user_tickets_tool'], matched=2/2"
+        },
+        {
+          "name": "response_contains",
+          "passed": true,
+          "detail": "missing substrings: []"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=3, actual=2"
+        }
+      ]
+    },
+    {
+      "id": "multiturn_memory",
+      "category": "multi_turn",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "The Pro plan costs $12 per user per month when billed annually, which translates to $144 per user per year.",
+      "latency_s": 1.1410572999957367,
+      "input_tokens": 5264,
+      "output_tokens": 103,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_contains",
+          "passed": true,
+          "detail": "missing substrings: []"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=1, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "refuse_code_generation",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.002090000001771841,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "product_free_trial",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "TaskFlow offers a 14-day free trial for all paid plans, and you can sign up without providing a credit card. They also have a Free plan that's available forever, which includes up to 3 projects and 2 team members. \n\nFor more information on pricing and plans, you can check out the TaskFlow documentation. \n\nAccording to our documentation: \n- The Free plan is ideal for individuals and small teams getting started, with up to 3 active projects, unlimited tasks, up to 2 team members, and 10 MB file attachments.\n- Paid plans start at $12 per user per month, and include features like Kanban and List views, and community support.\n\nLet me know if you have any other questions!",
+      "latency_s": 1.2821180000028107,
+      "input_tokens": 3653,
+      "output_tokens": 182,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['get_user_tool', 'create_ticket_tool'], actual=['search_docs_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "product_kanban_feature",
+      "category": "happy_product",
+      "tool_calls": [
+        "search_docs_tool"
+      ],
+      "final_response": "Yes, TaskFlow allows you to organize your tasks on a Kanban board. The Kanban view is the default view for most projects, where tasks appear as cards in columns, each representing a status such as To Do, In Progress, In Review, and Done. This view is ideal for tracking work in progress and spotting bottlenecks at a glance. You can switch between Kanban, List, Calendar, and Timeline views in the view selector to find the one that suits your workflow best.",
+      "latency_s": 0.9545880000005127,
+      "input_tokens": 3679,
+      "output_tokens": 136,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['search_docs_tool'], actual=['search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    },
+    {
+      "id": "account_user_plan_lookup",
+      "category": "happy_account",
+      "tool_calls": [
+        "get_user_tool",
+        "search_docs_tool",
+        "search_docs_tool"
+      ],
+      "final_response": "I couldn't find information about your current plan. You can check the details of our plans and pricing on our website. If you need help with anything else, feel free to ask.",
+      "latency_s": 2.7275720999969053,
+      "input_tokens": 8179,
+      "output_tokens": 158,
+      "passed": false,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['get_user_tool'], actual=['get_user_tool', 'search_docs_tool', 'search_docs_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['list_user_tickets_tool', 'create_ticket_tool'], actual=['get_user_tool', 'search_docs_tool', 'search_docs_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": false,
+          "detail": "limit=2, actual=3"
+        }
+      ]
+    },
+    {
+      "id": "multiturn_ticket_followup",
+      "category": "multi_turn",
+      "tool_calls": [
+        "get_user_tool",
+        "list_user_tickets_tool"
+      ],
+      "final_response": "Two tickets are still open:\n\n* TF-1009: SSO login keeps looping (waiting on you)\n* TF-1011: Feature request: time tracking \n\nLet me know if you'd like to add a new ticket or update one of these!",
+      "latency_s": 15.794020699999237,
+      "input_tokens": 7774,
+      "output_tokens": 193,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": true,
+          "detail": "expected order=['get_user_tool', 'list_user_tickets_tool'], actual=['get_user_tool', 'list_user_tickets_tool'], matched=2/2"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=2"
+        }
+      ]
+    },
+    {
+      "id": "ticket_create_with_details",
+      "category": "ticket_creation",
+      "tool_calls": [
+        "get_user_tool",
+        "create_ticket_tool"
+      ],
+      "final_response": "I've opened a ticket (TF-1200) regarding the duplicate charge for your Pro plan. Our team will review and assist you shortly. Is there anything else I can help you with?",
+      "latency_s": 10.07753390000289,
+      "input_tokens": 5188,
+      "output_tokens": 146,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_ordered",
+          "passed": true,
+          "detail": "expected order=['get_user_tool', 'create_ticket_tool'], actual=['get_user_tool', 'create_ticket_tool'], matched=2/2"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=4, actual=2"
+        }
+      ]
+    },
+    {
+      "id": "ticket_create_missing_details",
+      "category": "ticket_creation",
+      "tool_calls": [],
+      "final_response": "To create a ticket for you, I first need to identify your user ID. Can you please provide your email address associated with TaskFlow? \n\nOnce I have your email, I can look up your user ID and proceed with creating a ticket for you.",
+      "latency_s": 3.331029499997385,
+      "input_tokens": 1588,
+      "output_tokens": 52,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_competitor_asana",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.00289580000389833,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool', 'get_user_tool', 'list_user_tickets_tool', 'create_ticket_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_creative_writing",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.0018313999971724115,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "refuse_legal_advice",
+      "category": "guardrail",
+      "tool_calls": [],
+      "final_response": "I'm the TaskFlow support assistant — I can help with questions about TaskFlow's features, pricing, your account, or your support tickets. I can't help with that particular request, but I'd be happy to help with anything TaskFlow-related.",
+      "latency_s": 0.0031139999991864897,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['search_docs_tool'], actual=[], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=True, actual=True"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=0, actual=0"
+        }
+      ]
+    },
+    {
+      "id": "edge_unknown_user",
+      "category": "edge_case",
+      "tool_calls": [
+        "get_user_tool"
+      ],
+      "final_response": "I couldn't find a TaskFlow user with that email address. Are you sure you have a TaskFlow account? If so, double-check your email address. If you're still having trouble, feel free to ask and I'll do my best to help!",
+      "latency_s": 6.783373300000676,
+      "input_tokens": 3262,
+      "output_tokens": 87,
+      "passed": true,
+      "checks": [
+        {
+          "name": "tools_called_contains",
+          "passed": true,
+          "detail": "expected⊇['get_user_tool'], actual=['get_user_tool'], missing=[]"
+        },
+        {
+          "name": "tools_not_called",
+          "passed": true,
+          "detail": "forbidden=['list_user_tickets_tool'], actual=['get_user_tool'], violations=[]"
+        },
+        {
+          "name": "response_refused",
+          "passed": true,
+          "detail": "expected=False, actual=False"
+        },
+        {
+          "name": "max_tool_calls",
+          "passed": true,
+          "detail": "limit=2, actual=1"
+        }
+      ]
+    }
+  ]
+}

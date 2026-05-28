@@ -68,10 +68,12 @@ jobs:
         run: uv sync --dev --frozen
 
       - name: Run pytest
-        # Both keys need SOMETHING set so that importing agent.graph succeeds —
-        # the module builds the LLM client at load time. The test fixtures never
-        # actually call the LLM, so fake values are enough.
+        # agent.graph picks an LLM backend at module load via LLM_BACKEND.
+        # All three providers' keys are set to a placeholder so any backend
+        # imports cleanly; the test fixtures never actually call the LLM.
         env:
+          LLM_BACKEND: deepseek
+          DEEPSEEK_API_KEY: test-key-not-used
           OPENROUTER_API_KEY: test-key-not-used
           GROQ_API_KEY: test-key-not-used
         run: uv run pytest

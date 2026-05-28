@@ -15,6 +15,7 @@ dependencies = [
     "langchain-text-splitters>=1.1.1",
     "langfuse>=3.0.0",
     "langgraph>=1.1.6",
+    "matplotlib>=3.10.9",
     "pydantic>=2.12.5",
     "pymongo>=4.16.0",
     "python-dotenv>=1.2.2",

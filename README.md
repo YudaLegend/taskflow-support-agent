@@ -43,7 +43,8 @@ Most LLM-app tutorials stop at "import LLM, prompt it, return the response." Thi
 | **Agent eval, not just RAG eval** | 15 scripted scenarios with deterministic trajectory + endpoint assertions (`tools_called_ordered`, `response_contains`, ...) — no LLM-as-judge for trajectories, because they're fully observable |
 | **Real observability** | Self-hosted Langfuse v3 in dev (compose), Langfuse Cloud in prod. `request_id == trace_id` so user 👍/👎 lands as a score on the exact trace via `create_score`, closing the prod-eval feedback loop |
 | **Streaming UX, not just JSON** | SSE token streaming via async generator + `StreamingResponse`. Edge case handled: when the guardrail refuses, no LLM tokens fire — falls back to `graph.aget_state(...)` so the UI bubble isn't empty |
-| **Production-shaped infra** | Multi-stage Dockerfile, full compose stack, env-var driven (12-factor), GitHub Actions CI gating every PR, deployed to a free tier with 3 external services (Atlas, Langfuse Cloud, OpenRouter) |
+| **Production-shaped infra** | Multi-stage Dockerfile, full compose stack, env-var driven (12-factor), GitHub Actions CI gating every PR, deployed to a free tier with 3 external services (Atlas, Langfuse Cloud, Groq) |
+| **Swappable LLM backend, picked with data** | Two providers wired up (Groq · Llama-4 and api.deepseek.com · DeepSeek-V3), selectable by `LLM_BACKEND` env var. Chose Groq based on a 15-scenario A/B — see the [Backend comparison](#backend-comparison--deepseek-vs-llama-4-on-groq) below. |
 
 **[HANDOFF.md](HANDOFF.md)** is the day-by-day decision log — what was built, what was tried and didn't work, and why. Read it if you want the full story behind each choice.
 
@@ -58,7 +59,7 @@ graph LR
     Tools -->|search_docs| Chroma[(ChromaDB<br/>embedded)]
     Tools -->|get_user, list_tickets,<br/>create_ticket| Mongo[(MongoDB Atlas)]
 
-    Graph -->|LLM API| LLM[OpenRouter<br/>DeepSeek V4 Flash · free tier]
+    Graph -->|LLM API<br/>LLM_BACKEND={groq,deepseek}| LLM[Groq · Llama-4 Scout 17B<br/>or api.deepseek.com · DeepSeek-V3]
 
     Graph -.->|callback spans| Langfuse[Langfuse Cloud<br/>traces + scores]
     User -.->|👍/👎 click| FastAPI
@@ -78,8 +79,8 @@ START → guard_input ──refused──> END (canonical refusal, no LLM call)
 
 | Layer | Choice | Why |
 |---|---|---|
-| **LLM** | OpenRouter · `deepseek/deepseek-v4-flash:free` (Groq `llama-4-scout-17b` kept as fallback in [`agent/graph.py`](agent/graph.py)) | Free tier, MoE model with strong tool-calling, accessed through OpenRouter's OpenAI-compatible API so the same `ChatOpenAI` client can target other providers without code changes. |
-| **Agent framework** | LangGraph (langchain v1) + `ChatOpenAI` (against OpenRouter) | ReAct loop, MemorySaver checkpointer, callback hooks for Langfuse |
+| **LLM** | Groq · `meta-llama/llama-4-scout-17b-16e-instruct` (primary). DeepSeek-V3 via `api.deepseek.com` wired up as an alternative — pick with `LLM_BACKEND={groq,deepseek}`. | Both support native tool calling. Picked Groq based on a head-to-head A/B (14/15 vs 12/15 pass rate, 2.2× faster median) — see [Backend comparison](#backend-comparison--deepseek-vs-llama-4-on-groq). DeepSeek stays in tree as a paid fallback. |
+| **Agent framework** | LangGraph (langchain v1) + `ChatGroq` / `ChatOpenAI` (DeepSeek's API is OpenAI-compatible, so the same wrapper works) | ReAct loop, MemorySaver checkpointer, callback hooks for Langfuse |
 | **Embedding + RAG** | ChromaDB embedded · `all-MiniLM-L6-v2` via onnxruntime | Single process, no extra container at this scale. Default Chroma embedder = same model, no `sentence-transformers` (saves ~800 MB) |
 | **API** | FastAPI + uvicorn | Async-native, SSE streaming, auto-generated OpenAPI docs at `/docs`, dependency injection seam for testing |
 | **UI** | Single-file vanilla HTML + JS | EventSource doesn't support POST; we parse SSE manually with `fetch` + `ReadableStream`. ~180 LOC, no build step. |
@@ -103,8 +104,9 @@ Open https://huggingface.co/spaces/jinyuuda/taskflow-support-agent — talk to t
 git clone https://github.com/YudaLegend/taskflow-support-agent
 cd taskflow-support-agent
 cp .env.example .env
-# Edit .env: paste your OPENROUTER_API_KEY (free at https://openrouter.ai/keys)
-# (Or set GROQ_API_KEY instead and uncomment the ChatGroq block in agent/graph.py)
+# Edit .env: paste your GROQ_API_KEY (free at https://console.groq.com/keys)
+# Alternative backend: set DEEPSEEK_API_KEY and LLM_BACKEND=deepseek
+# (https://platform.deepseek.com/api_keys — pay-as-you-go, no free tier)
 # Optional: paste LANGFUSE_PUBLIC_KEY/SECRET_KEY for tracing
 
 docker compose up --build
@@ -135,8 +137,8 @@ uv run uvicorn app.main:app --reload --port 8000
 ```bash
 uv run pytest                       # 33 unit + API tests, no LLM/Langfuse needed
 uv run ruff check .                 # lint
-uv run python -m eval.run_eval      # RAG eval (consumes free-tier OpenRouter quota)
-uv run python -m eval.run_agent_eval  # 15 agent scenarios (consumes free-tier OpenRouter quota)
+uv run python -m eval.run_eval      # RAG eval (uses Groq's free tier)
+uv run python -m eval.run_agent_eval  # 15 agent scenarios (uses Groq's free tier)
 ```
 
 ## Project structure
@@ -189,6 +191,36 @@ Two distinct evals, intentionally separated:
 | **`eval/run_agent_eval.py`** (Agent) | 15 scenarios with **deterministic** assertions: `tools_called_ordered`, `tools_called_contains`, `response_contains`, `response_refused`, `max_tool_calls`. NO LLM judging. | Agent trajectories (which tools fired, in what order) are fully observable. Use the cheaper, faster, transparent test. |
 
 Day 11's chunk-size sweep + hybrid retrieval experiment lives in [`eval/RETRIEVAL_EXPERIMENTS.md`](eval/RETRIEVAL_EXPERIMENTS.md). Headline finding: **on a small, clean, single-domain corpus, dense retrieval was already at the ceiling and BM25 added noise** — hybrid regressed both retrieval (`hit@3` 1.00 → 0.80) and faithfulness (5.0 → 3.0 on a key question). Hybrid is a tool, not a default.
+
+### Backend comparison — DeepSeek vs Llama-4 on Groq
+
+The agent's LLM is swappable via `LLM_BACKEND={deepseek,groq}` env var (wired in [`agent/graph.py`](agent/graph.py)). To pick between the two for production, I ran the same 15 agent scenarios against both and recorded pass rate, latency, tool-call count, and token usage. Driver: [`eval/compare_backends.py`](eval/compare_backends.py).
+
+| Backend | Pass rate | Median latency | P95 latency | Total tool calls | Total tokens | Cost (USD) |
+|---|---|---|---|---|---|---|
+| `deepseek` (DeepSeek-V4 via api.deepseek.com) | 12/15 | 2.75s | 8.12s | 14 | 45,688 | $0.0143 |
+| `groq` (Llama-4 Scout 17B via Groq) | 14/15 | 1.24s | 16.94s | 15 | 52,457 | $0.0000 |
+
+![Backend comparison — aggregates](eval/charts/comparison_aggregate.png)
+
+![Backend comparison — per-scenario latency](eval/charts/comparison_latency_per_scenario.png)
+
+**4 of 15 scenarios diverged** — Groq won 3 (`product_integrations`, `account_tickets_correct_order`, `ticket_create_with_details`), DeepSeek won 1 (`account_user_plan_lookup`).
+
+**Decision: stick with Groq + Llama-4 in production.** Three reasons:
+
+1. **Higher accuracy.** 93% vs 80% pass rate is a meaningful gap on a 15-scenario suite — Groq finishes the trajectory correctly on every divergent product/ticket scenario.
+2. **Faster median.** 1.24s vs 2.75s — a 2.2× speedup matters for chat UX.
+3. **Free tier vs $0.01/run.** Cost is rounding error today, but Llama-4 on Groq is genuinely free and DeepSeek isn't.
+
+**What pushed back against Groq.** The p95 latency is 16.94s vs DeepSeek's 8.12s — two scenarios (`multiturn_ticket_followup`, `ticket_create_with_details`) ran 10s+ on Groq. Those are the long-tail outliers I'd watch in prod via Langfuse p95 panels; if they reproduce under real load, the streaming UX masks most of it but doesn't fix it.
+
+**Reproduce:**
+
+```bash
+uv run python -m eval.compare_backends                # run both backends, ~3-4 min
+uv run python -m eval.compare_backends --from-json    # regenerate report + charts only
+```
 
 ## Observability
 
